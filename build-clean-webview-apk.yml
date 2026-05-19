@@ -1,0 +1,2826 @@
+name: Build Photo Layout Helper APK - Clean WebView
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main, master ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android packages
+        run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+
+      - name: Create Android project files
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p app/src/main/java/com/photolayouthelper/app
+          mkdir -p app/src/main/res/values
+          mkdir -p app/src/main/res/drawable
+          mkdir -p app/src/main/assets
+
+          cat > settings.gradle <<'EOF_SETTINGS_GRADLE_PHOTO_HELPER'
+          pluginManagement {
+              repositories {
+                  google()
+                  mavenCentral()
+                  gradlePluginPortal()
+              }
+          }
+          
+          dependencyResolutionManagement {
+              repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+          }
+          
+          rootProject.name = "PhotoLayoutHelper"
+          include ':app'
+          EOF_SETTINGS_GRADLE_PHOTO_HELPER
+
+          cat > build.gradle <<'EOF_ROOT_BUILD_GRADLE_PHOTO_HELPER'
+          plugins {
+              id 'com.android.application' version '8.7.3' apply false
+          }
+          EOF_ROOT_BUILD_GRADLE_PHOTO_HELPER
+
+          cat > gradle.properties <<'EOF_GRADLE_PROPERTIES_PHOTO_HELPER'
+          android.useAndroidX=true
+          android.enableJetifier=true
+          org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
+          EOF_GRADLE_PROPERTIES_PHOTO_HELPER
+
+          cat > app/build.gradle <<'EOF_APP_BUILD_GRADLE_PHOTO_HELPER'
+          plugins {
+              id 'com.android.application'
+          }
+          
+          android {
+              namespace 'com.photolayouthelper.app'
+              compileSdk 35
+          
+              defaultConfig {
+                  applicationId 'com.photolayouthelper.app'
+                  minSdk 23
+                  targetSdk 35
+                  versionCode 13
+                  versionName '13.0'
+              }
+          
+              compileOptions {
+                  sourceCompatibility JavaVersion.VERSION_17
+                  targetCompatibility JavaVersion.VERSION_17
+              }
+          }
+          
+          dependencies {
+          }
+          EOF_APP_BUILD_GRADLE_PHOTO_HELPER
+
+          cat > app/src/main/AndroidManifest.xml <<'EOF_ANDROID_MANIFEST_PHOTO_HELPER'
+          <?xml version="1.0" encoding="utf-8"?>
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+          
+              <uses-permission android:name="android.permission.INTERNET" />
+          
+              <application
+                  android:allowBackup="true"
+                  android:hardwareAccelerated="true"
+                  android:icon="@drawable/ic_launcher"
+                  android:label="Photo Layout Helper"
+                  android:theme="@style/AppTheme"
+                  android:usesCleartextTraffic="false">
+                  <activity
+                      android:name=".MainActivity"
+                      android:configChanges="keyboard|keyboardHidden|orientation|screenSize|smallestScreenSize"
+                      android:exported="true"
+                      android:screenOrientation="portrait">
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN" />
+                          <category android:name="android.intent.category.LAUNCHER" />
+                      </intent-filter>
+                  </activity>
+              </application>
+          </manifest>
+          EOF_ANDROID_MANIFEST_PHOTO_HELPER
+
+          cat > app/src/main/res/values/styles.xml <<'EOF_STYLES_XML_PHOTO_HELPER'
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources>
+              <style name="AppTheme" parent="android:style/Theme.Material.NoActionBar">
+                  <item name="android:windowNoTitle">true</item>
+                  <item name="android:windowActionBar">false</item>
+                  <item name="android:windowFullscreen">true</item>
+                  <item name="android:windowLightStatusBar">false</item>
+                  <item name="android:statusBarColor">#000000</item>
+                  <item name="android:navigationBarColor">#000000</item>
+                  <item name="android:windowLightNavigationBar">false</item>
+              </style>
+          </resources>
+          EOF_STYLES_XML_PHOTO_HELPER
+
+          cat > app/src/main/res/drawable/ic_launcher.xml <<'EOF_ICON_VECTOR_PHOTO_HELPER'
+          <?xml version="1.0" encoding="utf-8"?>
+          <vector xmlns:android="http://schemas.android.com/apk/res/android"
+              android:width="108dp"
+              android:height="108dp"
+              android:viewportWidth="108"
+              android:viewportHeight="108">
+              <path android:fillColor="#111111" android:pathData="M0,0h108v108h-108z" />
+              <path android:fillColor="#ffffff" android:pathData="M20,26h68a8,8 0,0 1,8 8v40a8,8 0,0 1,-8 8h-68a8,8 0,0 1,-8 -8v-40a8,8 0,0 1,8 -8z" />
+              <path android:fillColor="#4b127f" android:pathData="M26,34h56a5,5 0,0 1,5 5v30a5,5 0,0 1,-5 5h-56a5,5 0,0 1,-5 -5v-30a5,5 0,0 1,5 -5z" />
+              <path android:fillColor="#ffffff" android:pathData="M32,62l12,-14l10,11l7,-7l15,18h-44z" />
+              <path android:fillColor="#ffffff" android:pathData="M72,42a6,6 0,1 0,0.1 0z" />
+          </vector>
+          EOF_ICON_VECTOR_PHOTO_HELPER
+
+          cat > app/src/main/java/com/photolayouthelper/app/MainActivity.java <<'EOF_MAIN_ACTIVITY_PHOTO_HELPER'
+          package com.photolayouthelper.app;
+          
+          import android.annotation.SuppressLint;
+          import android.app.Activity;
+          import android.content.ActivityNotFoundException;
+          import android.content.Intent;
+          import android.net.Uri;
+          import android.os.Build;
+          import android.os.Bundle;
+          import android.view.View;
+          import android.view.Window;
+          import android.view.WindowInsets;
+          import android.view.WindowInsetsController;
+          import android.view.WindowManager;
+          import android.webkit.ValueCallback;
+          import android.webkit.WebChromeClient;
+          import android.webkit.WebSettings;
+          import android.webkit.WebView;
+          import android.webkit.WebViewClient;
+          
+          public class MainActivity extends Activity {
+              private static final int FILE_CHOOSER_REQUEST = 4001;
+              private WebView webView;
+              private ValueCallback<Uri[]> filePathCallback;
+          
+              @SuppressLint("SetJavaScriptEnabled")
+              @Override
+              protected void onCreate(Bundle savedInstanceState) {
+                  super.onCreate(savedInstanceState);
+                  requestWindowFeature(Window.FEATURE_NO_TITLE);
+                  getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN);
+                  getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);
+          
+                  webView = new WebView(this);
+                  setContentView(webView);
+                  enterImmersiveMode();
+          
+                  WebSettings settings = webView.getSettings();
+                  settings.setJavaScriptEnabled(true);
+                  settings.setDomStorageEnabled(true);
+                  settings.setDatabaseEnabled(true);
+                  settings.setAllowFileAccess(true);
+                  settings.setAllowContentAccess(true);
+                  settings.setAllowFileAccessFromFileURLs(true);
+                  settings.setAllowUniversalAccessFromFileURLs(true);
+                  settings.setLoadWithOverviewMode(true);
+                  settings.setUseWideViewPort(true);
+                  settings.setMediaPlaybackRequiresUserGesture(false);
+                  settings.setCacheMode(WebSettings.LOAD_DEFAULT);
+                  if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                      settings.setSafeBrowsingEnabled(true);
+                  }
+          
+                  webView.setWebViewClient(new WebViewClient());
+          
+                  webView.setWebChromeClient(new WebChromeClient() {
+                      @Override
+                      public boolean onShowFileChooser(WebView view, ValueCallback<Uri[]> callback, WebChromeClient.FileChooserParams params) {
+                          if (filePathCallback != null) {
+                              filePathCallback.onReceiveValue(null);
+                          }
+                          filePathCallback = callback;
+                          Intent intent;
+                          try {
+                              intent = params.createIntent();
+                          } catch (Exception e) {
+                              intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+                              intent.addCategory(Intent.CATEGORY_OPENABLE);
+                              intent.setType("image/*");
+                              intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
+                          }
+                          try {
+                              startActivityForResult(intent, FILE_CHOOSER_REQUEST);
+                          } catch (ActivityNotFoundException e) {
+                              filePathCallback = null;
+                              return false;
+                          }
+                          return true;
+                      }
+                  });
+          
+                  webView.loadUrl("file:///android_asset/index.html");
+              }
+          
+              @Override
+              protected void onResume() {
+                  super.onResume();
+                  enterImmersiveMode();
+                  if (webView != null) {
+                      webView.onResume();
+                  }
+              }
+          
+              @Override
+              protected void onPause() {
+                  if (webView != null) {
+                      webView.onPause();
+                  }
+                  super.onPause();
+              }
+          
+              @Override
+              public void onWindowFocusChanged(boolean hasFocus) {
+                  super.onWindowFocusChanged(hasFocus);
+                  if (hasFocus) {
+                      enterImmersiveMode();
+                  }
+              }
+          
+              private void enterImmersiveMode() {
+                  if (Build.VERSION.SDK_INT >= 30) {
+                      Window window = getWindow();
+                      window.setDecorFitsSystemWindows(false);
+                      WindowInsetsController controller = window.getInsetsController();
+                      if (controller != null) {
+                          controller.hide(WindowInsets.Type.statusBars() | WindowInsets.Type.navigationBars());
+                          controller.setSystemBarsBehavior(WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
+                      }
+                  } else {
+                      getWindow().getDecorView().setSystemUiVisibility(
+                              View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+                                      | View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                                      | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                                      | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                                      | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                                      | View.SYSTEM_UI_FLAG_FULLSCREEN
+                      );
+                  }
+              }
+          
+              @Override
+              @SuppressWarnings("deprecation")
+              protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+                  super.onActivityResult(requestCode, resultCode, data);
+                  if (requestCode != FILE_CHOOSER_REQUEST || filePathCallback == null) {
+                      return;
+                  }
+          
+                  Uri[] results = null;
+                  if (resultCode == RESULT_OK && data != null) {
+                      if (data.getClipData() != null) {
+                          int count = data.getClipData().getItemCount();
+                          results = new Uri[count];
+                          for (int i = 0; i < count; i++) {
+                              results[i] = data.getClipData().getItemAt(i).getUri();
+                          }
+                      } else if (data.getData() != null) {
+                          results = new Uri[]{data.getData()};
+                      }
+                  }
+                  filePathCallback.onReceiveValue(results);
+                  filePathCallback = null;
+                  enterImmersiveMode();
+              }
+          
+              @Override
+              @SuppressWarnings("deprecation")
+              public void onBackPressed() {
+                  if (webView != null && webView.canGoBack()) {
+                      webView.goBack();
+                  } else {
+                      super.onBackPressed();
+                  }
+              }
+          }
+          EOF_MAIN_ACTIVITY_PHOTO_HELPER
+
+          cat > app/src/main/assets/index.html <<'EOF_INDEX_HTML_PHOTO_HELPER'
+          <!doctype html>
+          <html lang="en">
+          <head>
+            <meta charset="utf-8" />
+            <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+            <meta name="theme-color" content="#000000" />
+            <meta name="apple-mobile-web-app-capable" content="yes" />
+            <meta name="mobile-web-app-capable" content="yes" />
+          
+            <link rel="manifest" href="manifest.webmanifest" />
+            <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
+            <link rel="apple-touch-icon" href="icon-192.png" />
+            <title>Photo Layout Helper</title>
+            <style>
+              :root {
+                --safe-top: env(safe-area-inset-top, 0px);
+                --safe-bottom: env(safe-area-inset-bottom, 0px);
+                --panel-bg: rgba(22, 22, 26, 0.97);
+                --panel-line: rgba(255,255,255,0.12);
+                --purple: #4b127f;
+                --purple-dark: #391064;
+              }
+          
+              * { box-sizing: border-box; }
+          
+              html, body {
+                margin: 0;
+                height: 100%;
+                min-height: 100%;
+                width: 100%;
+                background: #000;
+                font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+                -webkit-tap-highlight-color: transparent;
+                overflow: hidden;
+                overscroll-behavior: none;
+                touch-action: manipulation;
+              }
+          
+              body.photo-mode,
+              body.gallery-mode,
+              body.account-mode {
+                overflow: hidden;
+                background: #000;
+              }
+          
+              button, input, select, textarea {
+                font: inherit;
+              }
+          
+              .page { display: none; }
+              .page.active { display: block; }
+          
+              #mainPage {
+                position: fixed;
+                inset: 0;
+                width: 100%;
+                height: 100dvh;
+                min-height: 100vh;
+                background: #000;
+                z-index: 0;
+                isolation: isolate;
+                overflow: hidden;
+                overscroll-behavior: none;
+              }
+          
+              #mainScroll {
+                position: absolute;
+                inset: 0;
+                width: 100%;
+                height: 100%;
+                overflow-x: hidden;
+                overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
+                overscroll-behavior: none;
+                touch-action: pan-y;
+                background: #000;
+                z-index: 0;
+                scrollbar-width: none;
+              }
+          
+              #mainScroll::-webkit-scrollbar { display: none; }
+          
+              #mainCanvas {
+                width: 100%;
+                min-height: 100%;
+                line-height: 0;
+                background: #000;
+                position: relative;
+                z-index: 0;
+              }
+          
+              #mainCanvas img.main-img {
+                display: block;
+                width: 100%;
+                height: auto;
+                margin: 0;
+                padding: 0;
+                border: 0;
+                outline: 0;
+                vertical-align: top;
+                background: #000;
+                position: relative;
+                z-index: 0;
+              }
+          
+              .empty-main {
+                min-height: 100vh;
+                width: 100%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: rgba(255,255,255,0.68);
+                background: #111;
+                font-size: 17px;
+                letter-spacing: 0.2px;
+                line-height: 1.4;
+                padding: 24px;
+                text-align: center;
+              }
+          
+              /* The only layer that contains buttons/tap-zones on the main page. */
+              #overlayLayer {
+                position: fixed;
+                inset: 0;
+                pointer-events: none;
+                z-index: 100;
+                display: none;
+                transform: translateZ(0);
+                backface-visibility: hidden;
+                contain: layout style paint;
+              }
+          
+              body.main-mode #overlayLayer { display: block; }
+          
+              .tap-button {
+                position: absolute;
+                left: 0;
+                top: 0;
+                pointer-events: auto;
+                touch-action: none;
+                user-select: none;
+                -webkit-user-select: none;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 0 10px;
+                text-align: center;
+                line-height: 1.05;
+                font-weight: 700;
+                color: white;
+                border: 0;
+                overflow: hidden;
+                cursor: pointer;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.20);
+                transform: translate3d(0, 0, 0);
+                will-change: transform, width, height;
+                contain: layout style;
+                backface-visibility: hidden;
+              }
+          
+              .button-text {
+                pointer-events: none;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                max-width: 100%;
+              }
+          
+              .tap-button.transparent-normal {
+                background: transparent !important;
+                box-shadow: none !important;
+                border: 0 !important;
+                color: rgba(255,255,255,0.9);
+                text-shadow: 0 1px 3px rgba(0,0,0,0.65);
+              }
+          
+              body.editing .tap-button {
+                outline: 1px dashed rgba(255,255,255,0.88);
+                outline-offset: 2px;
+                box-shadow: 0 0 0 9999px rgba(255,255,255,0.0001), 0 2px 12px rgba(0,0,0,0.35);
+              }
+          
+              body.editing .tap-button.transparent-normal {
+                background: rgba(255,255,255,0.06) !important;
+                border: 1px dashed rgba(255,255,255,0.9) !important;
+                color: rgba(255,255,255,0.95);
+                text-shadow: none;
+              }
+          
+              .resize-handle {
+                display: none;
+                position: absolute;
+                right: -7px;
+                bottom: -7px;
+                width: 20px;
+                height: 20px;
+                border-radius: 50%;
+                background: #fff;
+                border: 2px solid #111;
+                pointer-events: auto;
+                touch-action: none;
+              }
+          
+              body.editing .resize-handle { display: block; }
+          
+              #helpButton {
+                position: fixed;
+                top: calc(var(--safe-top) + 10px);
+                left: 10px;
+                width: 39px;
+                height: 39px;
+                border-radius: 50%;
+                border: 1.5px solid #fff;
+                background: transparent;
+                color: #fff;
+                display: none;
+                align-items: center;
+                justify-content: center;
+                z-index: 160;
+                font-size: 22px;
+                font-weight: 600;
+                line-height: 1;
+                padding: 0;
+                text-shadow: 0 1px 4px rgba(0,0,0,0.75);
+              }
+          
+              body.main-mode #helpButton { display: flex; }
+          
+              /* Dedicated fixed layer for the bottom overlay.
+                 This prevents Android Chrome from compositing scrolled images above it at page edges. */
+              #bottomOverlayLayer {
+                position: fixed;
+                inset: 0;
+                z-index: 80;
+                pointer-events: none;
+                display: none;
+                overflow: visible;
+                transform: translateZ(0);
+                backface-visibility: hidden;
+                contain: layout style paint;
+                isolation: isolate;
+              }
+          
+              body.main-mode #bottomOverlayLayer.visible { display: block; }
+          
+              #bottomOverlay {
+                position: absolute;
+                left: 50%;
+                top: 0;
+                right: auto;
+                bottom: auto;
+                margin: 0;
+                max-width: none;
+                transform: translate3d(-50%, 0, 0);
+                z-index: 1;
+                pointer-events: none;
+                display: none;
+                object-fit: contain;
+                will-change: top, left, width, height, transform;
+                backface-visibility: hidden;
+              }
+          
+              #bottomOverlay.visible { display: block; }
+          
+              body.editing #bottomOverlay.visible {
+                outline: 0;
+              }
+          
+              #bottomOverlayEditFrame {
+                position: absolute;
+                left: 50%;
+                top: 0;
+                right: auto;
+                bottom: auto;
+                transform: translate3d(-50%, 0, 0);
+                z-index: 2;
+                display: none;
+                pointer-events: none;
+                border: 1.5px dashed rgba(255,255,255,0.92);
+                outline: 2px solid rgba(0,0,0,0.20);
+                touch-action: none;
+                user-select: none;
+                -webkit-user-select: none;
+                backface-visibility: hidden;
+              }
+          
+              body.main-mode.editing #bottomOverlayEditFrame.visible {
+                display: block;
+                pointer-events: auto;
+              }
+          
+              .overlay-edit-label {
+                position: absolute;
+                left: 0;
+                top: -28px;
+                min-height: 22px;
+                padding: 4px 7px;
+                border-radius: 8px;
+                background: rgba(0,0,0,0.70);
+                color: #fff;
+                font-size: 12px;
+                line-height: 1;
+                pointer-events: none;
+                white-space: nowrap;
+              }
+          
+              .overlay-drag-handle {
+                position: absolute;
+                left: 50%;
+                top: 50%;
+                transform: translate(-50%, -50%);
+                min-width: 62px;
+                height: 36px;
+                padding: 0 12px;
+                border-radius: 999px;
+                border: 1.5px solid rgba(255,255,255,0.95);
+                background: rgba(0,0,0,0.68);
+                color: #fff;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 12px;
+                font-weight: 800;
+                letter-spacing: 0.02em;
+                box-shadow: 0 2px 12px rgba(0,0,0,0.45);
+                pointer-events: auto;
+                touch-action: none;
+              }
+          
+              .overlay-resize-handle {
+                position: absolute;
+                right: -10px;
+                bottom: -10px;
+                width: 24px;
+                height: 24px;
+                border-radius: 50%;
+                background: #fff;
+                border: 2px solid #111;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.35);
+                pointer-events: auto;
+                touch-action: none;
+              }
+          
+              /* Secondary full-screen pages */
+              #photoPage, #galleryPage {
+                position: fixed;
+                inset: 0;
+                background: #000;
+                z-index: 10;
+                overflow: hidden;
+              }
+          
+              .backArrow {
+                display: none !important;
+                position: fixed;
+                top: calc(var(--safe-top) + 10px);
+                left: 10px;
+                width: 42px;
+                height: 42px;
+                border: 0;
+                border-radius: 50%;
+                background: rgba(0,0,0,0.12);
+                color: #fff;
+                z-index: 220;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 34px;
+                line-height: 1;
+                padding: 0 0 3px 0;
+                text-shadow: 0 1px 4px rgba(0,0,0,0.9);
+              }
+          
+              #singlePhotoImg {
+                width: 100vw;
+                height: 100vh;
+                object-fit: cover;
+                display: block;
+                background: #000;
+              }
+          
+              .photo-placeholder, .gallery-placeholder {
+                height: 100vh;
+                width: 100vw;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: rgba(255,255,255,0.7);
+                background: #111;
+                text-align: center;
+                padding: 28px;
+                line-height: 1.4;
+              }
+          
+              #galleryStrip {
+                height: 100vh;
+                width: 100vw;
+                overflow-x: auto;
+                overflow-y: hidden;
+                display: flex;
+                scroll-snap-type: x mandatory;
+                -webkit-overflow-scrolling: touch;
+                background: #000;
+              }
+          
+              .gallery-slide {
+                flex: 0 0 100vw;
+                width: 100vw;
+                height: 100vh;
+                scroll-snap-align: start;
+                background: #000;
+              }
+          
+              .gallery-slide img {
+                display: block;
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+              }
+          
+              /* Account-style page */
+              #accountPage {
+                position: fixed;
+                inset: 0;
+                background: #f4f4f7;
+                color: #222;
+                z-index: 10;
+                overflow: auto;
+                -webkit-overflow-scrolling: touch;
+                padding-bottom: calc(86px + var(--safe-bottom));
+              }
+          
+              .account-top {
+                position: relative;
+                background: linear-gradient(135deg, var(--purple), var(--purple-dark));
+                height: 178px;
+                padding: calc(var(--safe-top) + 18px) 20px 0 58px;
+                color: #fff;
+                border-bottom-right-radius: 66px;
+              }
+          
+              .account-top h1 {
+                margin: 0;
+                font-size: 25px;
+                font-weight: 760;
+                letter-spacing: -0.2px;
+              }
+          
+              #accountPage .backArrow {
+                background: transparent;
+                color: #fff;
+                top: calc(var(--safe-top) + 7px);
+              }
+          
+              .profile-card {
+                position: relative;
+                z-index: 2;
+                margin: -50px 16px 18px;
+                background: #fff;
+                border-radius: 18px;
+                min-height: 104px;
+                display: flex;
+                align-items: center;
+                padding: 18px 16px;
+                box-shadow: 0 8px 26px rgba(36, 21, 61, 0.13);
+                gap: 14px;
+              }
+          
+              .avatar {
+                width: 57px;
+                height: 57px;
+                border-radius: 50%;
+                background: #1e87e9;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: #fff;
+                font-weight: 800;
+                font-size: 25px;
+                flex: 0 0 auto;
+              }
+          
+              .profile-copy { min-width: 0; flex: 1; }
+              .profile-title { font-size: 18px; font-weight: 750; margin-bottom: 4px; }
+              .profile-email { font-size: 13px; color: #73717a; overflow-wrap: anywhere; }
+              .chevron { font-size: 22px; color: #8d8994; padding-left: 5px; }
+          
+              .section-title {
+                margin: 25px 20px 10px;
+                color: #55515c;
+                font-size: 15px;
+                font-weight: 740;
+              }
+          
+              .account-list {
+                background: #fff;
+                margin: 0 12px;
+                border-radius: 15px;
+                overflow: hidden;
+                box-shadow: 0 1px 1px rgba(0,0,0,0.035);
+              }
+          
+              .account-row {
+                min-height: 54px;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 10px;
+                padding: 13px 16px;
+                border-bottom: 1px solid #eceaf0;
+                font-size: 15.5px;
+                background: #fff;
+              }
+          
+              .account-row:last-child { border-bottom: 0; }
+              .row-subtext { color: #7a7680; font-size: 13px; margin-top: 3px; }
+              .row-left { min-width: 0; }
+              .row-arrow { color: #aaa4af; font-size: 23px; }
+          
+              .toggle {
+                width: 48px;
+                height: 28px;
+                background: #5d2a91;
+                border-radius: 999px;
+                padding: 3px;
+                display: flex;
+                align-items: center;
+                justify-content: flex-end;
+                flex: 0 0 auto;
+              }
+          
+              .toggle span {
+                width: 22px;
+                height: 22px;
+                background: #fff;
+                border-radius: 50%;
+                display: block;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+              }
+          
+              .sign-out {
+                margin: 24px 12px 20px;
+                width: calc(100% - 24px);
+                border: 0;
+                border-radius: 15px;
+                background: #fff;
+                color: #5a158c;
+                min-height: 54px;
+                font-weight: 760;
+                font-size: 16px;
+              }
+          
+              .bottom-nav {
+                position: fixed;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                height: calc(66px + var(--safe-bottom));
+                background: #fff;
+                z-index: 130;
+                border-top: 1px solid #e3e0e8;
+                display: grid;
+                grid-template-columns: repeat(4, 1fr);
+                padding-bottom: var(--safe-bottom);
+              }
+          
+              .nav-item {
+                border: 0;
+                background: transparent;
+                color: #67616f;
+                font-size: 11.5px;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                gap: 3px;
+                position: relative;
+                min-width: 0;
+              }
+          
+              .nav-icon { font-size: 21px; line-height: 1; }
+              .nav-item.active { color: #5a158c; font-weight: 760; }
+              .nav-to-main { cursor: pointer; }
+          
+              /* Editor panel */
+              #editorPanel {
+                position: fixed;
+                left: 0;
+                right: 0;
+                top: 0;
+                bottom: auto;
+                max-height: calc(78vh + var(--safe-top));
+                padding-top: var(--safe-top);
+                background: var(--panel-bg);
+                color: #fff;
+                z-index: 210;
+                border-bottom: 1px solid var(--panel-line);
+                border-bottom-left-radius: 18px;
+                border-bottom-right-radius: 18px;
+                box-shadow: 0 10px 32px rgba(0,0,0,0.35);
+                display: none;
+                overflow: hidden;
+              }
+          
+              body.editing #editorPanel { display: block; }
+          
+              .editor-header {
+                min-height: 50px;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 10px;
+                padding: 10px 14px;
+                border-bottom: 1px solid var(--panel-line);
+              }
+          
+              .editor-title {
+                font-weight: 780;
+                letter-spacing: -0.1px;
+                font-size: 16px;
+              }
+          
+              .editor-header button,
+              .small-btn,
+              .file-label {
+                border: 1px solid rgba(255,255,255,0.18);
+                background: rgba(255,255,255,0.08);
+                color: #fff;
+                border-radius: 11px;
+                padding: 8px 10px;
+                font-weight: 650;
+                min-height: 37px;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                gap: 6px;
+              }
+          
+              .danger-btn { background: rgba(255, 64, 64, 0.18) !important; border-color: rgba(255, 130, 130, 0.25) !important; }
+              .muted-btn { color: rgba(255,255,255,0.78) !important; }
+          
+              #panelBody {
+                max-height: calc(78vh - 50px);
+                overflow: auto;
+                -webkit-overflow-scrolling: touch;
+                padding: 12px 12px 18px;
+              }
+          
+              #editorPanel.collapsed #panelBody { display: none; }
+              #editorPanel.collapsed { max-height: calc(52px + var(--safe-top)); }
+          
+              .editor-section {
+                border: 1px solid var(--panel-line);
+                border-radius: 14px;
+                padding: 12px;
+                margin-bottom: 12px;
+                background: rgba(255,255,255,0.045);
+              }
+          
+              .editor-section h2 {
+                margin: 0 0 10px;
+                font-size: 14px;
+                letter-spacing: 0.2px;
+                color: rgba(255,255,255,0.9);
+              }
+          
+              .control-grid {
+                display: grid;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 10px;
+              }
+          
+              .control-grid.one { grid-template-columns: 1fr; }
+              .wide { grid-column: 1 / -1; }
+          
+              label.control {
+                display: flex;
+                flex-direction: column;
+                gap: 5px;
+                color: rgba(255,255,255,0.72);
+                font-size: 12.5px;
+                font-weight: 620;
+                min-width: 0;
+              }
+          
+              .control input[type="text"],
+              .control input[type="number"],
+              .control input[type="email"],
+              .control select {
+                width: 100%;
+                min-height: 38px;
+                border-radius: 10px;
+                border: 1px solid rgba(255,255,255,0.14);
+                background: rgba(0,0,0,0.24);
+                color: #fff;
+                padding: 8px 9px;
+                outline: none;
+              }
+          
+              .control input[type="color"] {
+                width: 100%;
+                min-height: 38px;
+                border-radius: 10px;
+                border: 1px solid rgba(255,255,255,0.14);
+                background: rgba(0,0,0,0.24);
+                padding: 3px;
+              }
+          
+              .toggle-row {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 10px;
+                min-height: 38px;
+                padding: 8px 0;
+                color: rgba(255,255,255,0.82);
+                font-size: 13px;
+                font-weight: 650;
+              }
+          
+              .toggle-row input { width: 22px; height: 22px; }
+          
+              .button-row {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 8px;
+                margin-top: 9px;
+              }
+          
+              input[type="file"] { display: none; }
+          
+              .editor-note {
+                color: rgba(255,255,255,0.60);
+                font-size: 12px;
+                line-height: 1.35;
+                margin-top: 8px;
+              }
+          
+          
+          
+              #sampleToast {
+                position: fixed;
+                left: 50%;
+                top: calc(var(--safe-top) + 12px);
+                transform: translateX(-50%);
+                z-index: 320;
+                max-width: calc(100vw - 24px);
+                padding: 10px 14px;
+                border-radius: 999px;
+                background: rgba(0,0,0,0.78);
+                color: #fff;
+                font-size: 13px;
+                font-weight: 700;
+                line-height: 1.25;
+                text-align: center;
+                pointer-events: none;
+                display: none;
+                box-shadow: 0 6px 20px rgba(0,0,0,0.35);
+              }
+          
+              body.color-sampling #sampleToast { display: block; }
+          
+              body.color-sampling #overlayLayer .tap-button {
+                pointer-events: none;
+              }
+          
+              @media (max-width: 390px) {
+                .control-grid { grid-template-columns: 1fr; }
+                .wide { grid-column: auto; }
+                .account-top { padding-left: 56px; }
+                .profile-card { margin-left: 12px; margin-right: 12px; }
+              }
+            </style>
+          </head>
+          <body class="main-mode">
+            <main id="mainPage" class="page active" aria-label="Main page">
+              <div id="mainScroll" aria-label="Scrollable photo canvas">
+                <div id="mainCanvas"></div>
+              </div>
+            </main>
+          
+            <section id="photoPage" class="page" aria-label="Single photo page">
+              <div id="photoContent"></div>
+            </section>
+          
+            <section id="galleryPage" class="page" aria-label="Side scrolling gallery page">
+              <div id="galleryStrip"></div>
+            </section>
+          
+            <section id="accountPage" class="page" aria-label="Account page">
+              <div class="account-top"><h1>Account</h1></div>
+              <div class="profile-card">
+                <div class="avatar" aria-hidden="true">J</div>
+                <div class="profile-copy">
+                  <div class="profile-title" id="profileTitle">Personal</div>
+                  <div class="profile-email" id="profileEmail">jtavaglione@hotmail.co.uk</div>
+                </div>
+                <div class="chevron" aria-hidden="true">⌄</div>
+              </div>
+          
+              <div class="section-title">Booking preferences</div>
+              <div class="account-list">
+                <div class="account-row"><div>Payment methods</div><div class="row-arrow">›</div></div>
+                <div class="account-row"><div>Railcards</div><div class="row-arrow">›</div></div>
+              </div>
+          
+              <div class="section-title">Trainline Business</div>
+              <div class="account-list">
+                <div class="account-row"><div>Sign in to your account</div><div class="row-arrow">›</div></div>
+              </div>
+          
+              <div class="section-title">App settings</div>
+              <div class="account-list">
+                <div class="account-row"><div>App icon</div><div class="row-arrow">›</div></div>
+                <div class="account-row"><div class="row-left"><div>Currency</div><div class="row-subtext">£ / GBP</div></div><div class="row-arrow">›</div></div>
+                <div class="account-row"><div>Your privacy choices</div><div class="row-arrow">›</div></div>
+                <div class="account-row"><div>Haptic feedback</div><div class="toggle" aria-hidden="true"><span></span></div></div>
+              </div>
+          
+              <div class="section-title">Contact preferences</div>
+              <div class="account-list">
+                <div class="account-row"><div>Marketing preferences</div><div class="row-arrow">›</div></div>
+              </div>
+          
+              <div class="section-title">Your details</div>
+              <div class="account-list">
+                <div class="account-row"><div>Change email address</div><div class="row-arrow">›</div></div>
+              </div>
+          
+              <div class="section-title">Help</div>
+              <div class="account-list">
+                <div class="account-row"><div>Safe Spot</div><div class="row-arrow">›</div></div>
+                <div class="account-row"><div>Leave feedback</div><div class="row-arrow">›</div></div>
+                <div class="account-row"><div>Help and contact us</div><div class="row-arrow">›</div></div>
+                <div class="account-row"><div>About the app</div><div class="row-arrow">›</div></div>
+                <div class="account-row"><div>Delete my account</div><div class="row-arrow">›</div></div>
+              </div>
+          
+              <button class="sign-out">Sign out</button>
+          
+              <nav class="bottom-nav" aria-label="Bottom navigation">
+                <button class="nav-item"><span class="nav-icon">♡</span><span>Favourites</span></button>
+                <button class="nav-item"><span class="nav-icon">⌕</span><span>Search</span></button>
+                <button class="nav-item nav-to-main" id="myTicketsReturn"><span class="nav-icon">▤</span><span>My Tickets</span></button>
+                <button class="nav-item active"><span class="nav-icon">●</span><span>Account</span></button>
+              </nav>
+            </section>
+          
+            <div id="bottomOverlayLayer" aria-label="Fixed bottom overlay layer">
+              <img id="bottomOverlay" alt="Bottom overlay" />
+              <div id="bottomOverlayEditFrame" aria-label="Bottom overlay edit frame">
+                <div class="overlay-edit-label">Drag overlay</div>
+                <span class="overlay-drag-handle" data-overlay-drag="1">Drag</span>
+                <span class="overlay-resize-handle" data-overlay-resize="1"></span>
+              </div>
+            </div>
+            <div id="overlayLayer" aria-label="Fixed button overlay"></div>
+            <button id="helpButton" aria-label="Open Creative mode">?</button>
+            <div id="sampleToast">Tap a visible image to sample its colour</div>
+          
+            <aside id="editorPanel" aria-label="Creative mode panel">
+              <div class="editor-header">
+                <div class="editor-title">Creative mode</div>
+                <div class="button-row" style="margin:0">
+                  <button id="collapsePanelBtn" type="button">Collapse</button>
+                  <button id="closeEditorBtn" type="button">Close</button>
+                </div>
+              </div>
+              <div id="panelBody">
+                <div class="editor-section">
+                  <h2>Main page images</h2>
+                  <div class="button-row">
+                    <label class="file-label">Add main images<input id="addMainImages" type="file" accept="image/*" multiple></label>
+                    <label class="file-label">Replace main images<input id="replaceMainImages" type="file" accept="image/*" multiple></label>
+                    <button class="small-btn danger-btn" id="clearMainImages" type="button">Clear main images</button>
+                  </div>
+                  <div class="editor-note">Images stack vertically with no spacing by default. Use the sizing controls below when you need to stretch or lengthen them.</div>
+                </div>
+          
+                <div class="editor-section">
+                  <h2>Image sizing</h2>
+                  <div class="control-grid">
+                    <label class="control">Main image width %<input id="mainImageWidth" type="number" min="10" max="400" step="1"></label>
+                    <label class="control">Main image height/length px<input id="mainImageHeight" type="number" min="0" max="8000" step="1"></label>
+                    <label class="control">Main image fit
+                      <select id="mainImageFit">
+                        <option value="contain">Contain</option>
+                        <option value="cover">Cover/crop</option>
+                        <option value="fill">Stretch/fill</option>
+                      </select>
+                    </label>
+                    <label class="control">Single photo fit
+                      <select id="singlePhotoFit">
+                        <option value="cover">Cover/crop</option>
+                        <option value="contain">Contain</option>
+                        <option value="fill">Stretch/fill</option>
+                      </select>
+                    </label>
+                    <label class="control">Gallery image fit
+                      <select id="galleryImageFit">
+                        <option value="cover">Cover/crop</option>
+                        <option value="contain">Contain</option>
+                        <option value="fill">Stretch/fill</option>
+                      </select>
+                    </label>
+                  </div>
+                  <div class="editor-note">Set main image height/length to 0 for the original aspect ratio. Use Cover to crop into the space, Contain to show the whole image, or Stretch/fill to force the image into the chosen shape.</div>
+                </div>
+          
+                <div class="editor-section">
+                  <h2>Bottom overlay image</h2>
+                  <div class="button-row">
+                    <label class="file-label">Upload bottom overlay<input id="bottomOverlayUpload" type="file" accept="image/*"></label>
+                    <button class="small-btn danger-btn" id="clearBottomOverlay" type="button">Clear overlay</button>
+                  </div>
+                  <div class="control-grid">
+                    <label class="control">Width %<input id="overlayWidth" type="number" min="5" max="400" step="1"></label>
+                    <label class="control">Height/length px<input id="overlayHeight" type="number" min="1" max="8000" step="1"></label>
+                    <label class="control">Bottom gap px<input id="overlayBottomGap" type="number" min="0" max="3000" step="1"></label>
+                    <label class="control">Top roundness px<input id="overlayTopRadius" type="number" min="0" max="500" step="1"></label>
+                    <label class="control">Overlay image fit
+                      <select id="overlayFit">
+                        <option value="contain">Contain</option>
+                        <option value="cover">Cover/crop</option>
+                        <option value="fill">Stretch/fill</option>
+                      </select>
+                    </label>
+                  </div>
+                  <div class="editor-note">In Creative mode, drag the dashed overlay frame to move it up or down. Drag the white round handle to resize width and height directly.</div>
+                </div>
+          
+                <div class="editor-section">
+                  <h2>Button one</h2>
+                  <div class="control-grid">
+                    <label class="control wide">Name<input id="b1Text" type="text"></label>
+                    <label class="control">Width<input id="b1Width" type="number" min="12" max="2000" step="1"></label>
+                    <label class="control">Height<input id="b1Height" type="number" min="12" max="1200" step="1"></label>
+                    <label class="control">Roundness<input id="b1Radius" type="number" min="0" max="999" step="1"></label>
+                    <label class="control">Color picker<input id="b1Color" type="color"></label>
+                    <label class="control">Exact hex<input id="b1Hex" type="text" inputmode="text" placeholder="#c81924"></label>
+                  </div>
+                  <div class="button-row">
+                    <label class="file-label">Upload target photo<input id="singlePhotoUpload" type="file" accept="image/*"></label>
+                    <button class="small-btn" id="sampleB1Color" type="button">Pick button one colour from image</button>
+                  </div>
+                </div>
+          
+                <div class="editor-section">
+                  <h2>Button two and gallery</h2>
+                  <div class="control-grid">
+                    <label class="control wide">Name, can be blank<input id="b2Text" type="text"></label>
+                    <label class="control">Width<input id="b2Width" type="number" min="12" max="2000" step="1"></label>
+                    <label class="control">Height<input id="b2Height" type="number" min="12" max="1200" step="1"></label>
+                    <label class="control">Roundness<input id="b2Radius" type="number" min="0" max="999" step="1"></label>
+                    <label class="control">Color picker<input id="b2Color" type="color"></label>
+                    <label class="control">Exact hex<input id="b2Hex" type="text" inputmode="text" placeholder="#1266dd"></label>
+                  </div>
+                  <div class="toggle-row"><span>Transparent</span><input id="b2Transparent" type="checkbox"></div>
+                  <div class="toggle-row"><span>Lock to screen</span><input id="b2Locked" type="checkbox"></div>
+                  <div class="button-row">
+                    <button class="small-btn" id="lockB2Now" type="button">Lock button two exactly where it is now</button>
+                    <button class="small-btn" id="cloneB2" type="button">Clone button two here</button>
+                    <button class="small-btn danger-btn" id="deleteLastClone" type="button">Delete last clone</button>
+                    <button class="small-btn danger-btn" id="clearClones" type="button">Clear clones</button>
+                    <label class="file-label">Upload gallery photos<input id="galleryUpload" type="file" accept="image/*" multiple></label>
+                    <button class="small-btn" id="sampleB2Color" type="button">Pick button two colour from image</button>
+                    <button class="small-btn danger-btn" id="clearGallery" type="button">Clear gallery</button>
+                  </div>
+                </div>
+          
+                <div class="editor-section">
+                  <h2>Account</h2>
+                  <div class="control-grid">
+                    <label class="control wide">Account profile title<input id="accountTitle" type="text"></label>
+                    <label class="control wide">Account email text<input id="accountEmail" type="email"></label>
+                    <label class="control">Button width<input id="accountWidth" type="number" min="12" max="2000" step="1"></label>
+                    <label class="control">Button height<input id="accountHeight" type="number" min="12" max="1200" step="1"></label>
+                    <label class="control">Button roundness<input id="accountRadius" type="number" min="0" max="999" step="1"></label>
+                    <label class="control">Button color picker<input id="accountColor" type="color"></label>
+                    <label class="control">Button exact hex<input id="accountHex" type="text" inputmode="text" placeholder="#000000"></label>
+                  </div>
+                  <div class="toggle-row"><span>Transparent</span><input id="accountTransparent" type="checkbox"></div>
+                  <div class="toggle-row"><span>Lock to screen</span><input id="accountLocked" type="checkbox"></div>
+                  <div class="button-row">
+                    <button class="small-btn" id="lockAccountNow" type="button">Lock account button exactly where it is now</button>
+                    <button class="small-btn" id="sampleAccountColor" type="button">Pick account button colour from image</button>
+                  </div>
+                </div>
+          
+                <div class="editor-section">
+                  <h2>Reset</h2>
+                  <div class="button-row">
+                    <button class="small-btn" id="resetLayout" type="button">Reset layout</button>
+                    <button class="small-btn danger-btn" id="clearEverything" type="button">Clear everything</button>
+                  </div>
+                  <div class="editor-note">Reset layout keeps images. Clear everything removes images and settings from this browser.</div>
+                </div>
+              </div>
+            </aside>
+          
+            <script>
+            (() => {
+              'use strict';
+          
+              const DB_NAME = 'photo-layout-helper-db';
+              const DB_VERSION = 1;
+              const STORE = 'images';
+              const LS_KEY = 'photo-layout-helper-settings-v1';
+              const MIN_SIZE = 12;
+          
+              let db = null;
+              let state = null;
+              let currentPage = 'main';
+              let renderQueued = false;
+              let buttonElements = new Map();
+              let scrollLoopRaf = 0;
+              let scrollLoopUntil = 0;
+              let dragState = null;
+              let colorPickTarget = null;
+              let objectUrls = { main: [], gallery: [], photo: null, bottom: null };
+          
+              const els = {
+                body: document.body,
+                mainPage: document.getElementById('mainPage'),
+                mainScroll: document.getElementById('mainScroll'),
+                photoPage: document.getElementById('photoPage'),
+                galleryPage: document.getElementById('galleryPage'),
+                accountPage: document.getElementById('accountPage'),
+                mainCanvas: document.getElementById('mainCanvas'),
+                overlayLayer: document.getElementById('overlayLayer'),
+                helpButton: document.getElementById('helpButton'),
+                editorPanel: document.getElementById('editorPanel'),
+                panelBody: document.getElementById('panelBody'),
+                bottomOverlayLayer: document.getElementById('bottomOverlayLayer'),
+                bottomOverlay: document.getElementById('bottomOverlay'),
+                bottomOverlayEditFrame: document.getElementById('bottomOverlayEditFrame'),
+                photoContent: document.getElementById('photoContent'),
+                galleryStrip: document.getElementById('galleryStrip'),
+                profileTitle: document.getElementById('profileTitle'),
+                profileEmail: document.getElementById('profileEmail'),
+                sampleToast: document.getElementById('sampleToast')
+              };
+          
+              function freshDefaults() {
+                const vw = Math.max(320, window.innerWidth || 390);
+                const vh = Math.max(520, window.innerHeight || 760);
+                return {
+                  mainImageIds: [],
+                  photoImageId: null,
+                  galleryImageIds: [],
+                  bottomOverlayImageId: null,
+                  bottomOverlay: {
+                    widthPct: 100,
+                    height: 150,
+                    bottomGap: 0,
+                    screenY: Math.max(0, vh - 150),
+                    fit: 'contain',
+                    topRadius: 0
+                  },
+                  imageSizing: {
+                    mainWidthPct: 100,
+                    mainHeight: 0,
+                    mainFit: 'contain',
+                    singleFit: 'cover',
+                    galleryFit: 'cover'
+                  },
+                  buttons: {
+                    button1: {
+                      text: 'Open Photo', x: 20, y: 122, width: Math.min(260, vw - 40), height: 58,
+                      radius: 17, color: '#c81924', transparent: false, locked: false, action: 'photo'
+                    },
+                    button2: {
+                      text: 'Photos', x: 20, y: 204, width: 126, height: 50,
+                      radius: 15, color: '#1266dd', transparent: false, locked: false, action: 'gallery'
+                    },
+                    account: {
+                      text: '', x: Math.max(12, vw - 78), y: Math.max(12, vh - 108), width: 58, height: 58,
+                      radius: 29, color: '#000000', transparent: true, locked: true, action: 'account'
+                    },
+                    clones: []
+                  },
+                  account: {
+                    title: 'Personal',
+                    email: 'jtavaglione@hotmail.co.uk'
+                  },
+                  editor: {
+                    open: false,
+                    collapsed: false
+                  }
+                };
+              }
+          
+              function safeNumber(value, fallback, min, max) {
+                const n = Number(value);
+                if (!Number.isFinite(n)) return fallback;
+                return Math.max(min, Math.min(max, n));
+              }
+          
+              function validHex(value, fallback = '#888888') {
+                if (typeof value !== 'string') return fallback;
+                let v = value.trim();
+                if (!v) return fallback;
+                if (v[0] !== '#') v = '#' + v;
+                if (/^#[0-9a-fA-F]{3}$/.test(v)) {
+                  v = '#' + v.slice(1).split('').map(ch => ch + ch).join('');
+                }
+                return /^#[0-9a-fA-F]{6}$/.test(v) ? v.toLowerCase() : fallback;
+              }
+          
+              function validFit(value, fallback = 'cover') {
+                return ['cover', 'contain', 'fill'].includes(value) ? value : fallback;
+              }
+          
+              function viewportHeight() {
+                return Math.max(320, Math.round(window.innerHeight || document.documentElement.clientHeight || 760));
+              }
+          
+              function viewportWidth() {
+                return Math.max(320, Math.round(window.innerWidth || document.documentElement.clientWidth || 390));
+              }
+          
+              function mainScrollY() {
+                return Math.max(0, Math.round((els.mainScroll && els.mainScroll.scrollTop) || 0));
+              }
+          
+              function bottomOverlayCssTop() {
+                return Math.round(ensureBottomOverlayScreenY());
+              }
+          
+              function bottomOverlayCssLeft() {
+                return Math.round(viewportWidth() / 2);
+              }
+          
+              function bottomOverlayPixelWidth() {
+                return Math.max(1, Math.round((viewportWidth() * state.bottomOverlay.widthPct) / 100));
+              }
+          
+              function calculateOverlayScreenYFromBottomGap() {
+                if (!state || !state.bottomOverlay) return 0;
+                return Math.round(viewportHeight() - state.bottomOverlay.height - state.bottomOverlay.bottomGap);
+              }
+          
+              function ensureBottomOverlayScreenY() {
+                if (!state || !state.bottomOverlay) return 0;
+                const y = Number(state.bottomOverlay.screenY);
+                if (!Number.isFinite(y)) {
+                  state.bottomOverlay.screenY = calculateOverlayScreenYFromBottomGap();
+                }
+                return state.bottomOverlay.screenY;
+              }
+          
+              function syncBottomGapFromScreenY() {
+                if (!state || !state.bottomOverlay) return;
+                const gap = Math.round(viewportHeight() - ensureBottomOverlayScreenY() - state.bottomOverlay.height);
+                state.bottomOverlay.bottomGap = safeNumber(gap, state.bottomOverlay.bottomGap, 0, 3000);
+              }
+          
+              function cleanButton(raw, fallback) {
+                const b = Object.assign({}, fallback, raw || {});
+                b.text = typeof b.text === 'string' ? b.text : fallback.text;
+                b.x = safeNumber(b.x, fallback.x, -5000, 5000);
+                b.y = safeNumber(b.y, fallback.y, -5000, 200000);
+                b.width = safeNumber(b.width, fallback.width, MIN_SIZE, 3000);
+                b.height = safeNumber(b.height, fallback.height, MIN_SIZE, 3000);
+                b.radius = safeNumber(b.radius, fallback.radius, 0, 999);
+                b.color = validHex(b.color, fallback.color);
+                b.transparent = !!b.transparent;
+                b.locked = !!b.locked;
+                b.action = fallback.action;
+                return b;
+              }
+          
+              function mergeState(saved) {
+                const d = freshDefaults();
+                if (!saved || typeof saved !== 'object') return d;
+                const merged = freshDefaults();
+                merged.mainImageIds = Array.isArray(saved.mainImageIds) ? saved.mainImageIds.filter(Boolean) : [];
+                merged.photoImageId = saved.photoImageId || null;
+                merged.galleryImageIds = Array.isArray(saved.galleryImageIds) ? saved.galleryImageIds.filter(Boolean) : [];
+                merged.bottomOverlayImageId = saved.bottomOverlayImageId || null;
+                merged.bottomOverlay = Object.assign({}, d.bottomOverlay, saved.bottomOverlay || {});
+                merged.bottomOverlay.widthPct = safeNumber(merged.bottomOverlay.widthPct, d.bottomOverlay.widthPct, 5, 400);
+                merged.bottomOverlay.height = safeNumber(merged.bottomOverlay.height, d.bottomOverlay.height, 1, 8000);
+                merged.bottomOverlay.bottomGap = safeNumber(merged.bottomOverlay.bottomGap, d.bottomOverlay.bottomGap, 0, 3000);
+                merged.bottomOverlay.screenY = Number.isFinite(Number(merged.bottomOverlay.screenY))
+                  ? safeNumber(merged.bottomOverlay.screenY, d.bottomOverlay.screenY, -8000, 8000)
+                  : null;
+                merged.bottomOverlay.fit = validFit(merged.bottomOverlay.fit, d.bottomOverlay.fit);
+                merged.bottomOverlay.topRadius = safeNumber(merged.bottomOverlay.topRadius, d.bottomOverlay.topRadius, 0, 500);
+                merged.imageSizing = Object.assign({}, d.imageSizing, saved.imageSizing || {});
+                merged.imageSizing.mainWidthPct = safeNumber(merged.imageSizing.mainWidthPct, d.imageSizing.mainWidthPct, 10, 400);
+                merged.imageSizing.mainHeight = safeNumber(merged.imageSizing.mainHeight, d.imageSizing.mainHeight, 0, 8000);
+                merged.imageSizing.mainFit = validFit(merged.imageSizing.mainFit, d.imageSizing.mainFit);
+                merged.imageSizing.singleFit = validFit(merged.imageSizing.singleFit, d.imageSizing.singleFit);
+                merged.imageSizing.galleryFit = validFit(merged.imageSizing.galleryFit, d.imageSizing.galleryFit);
+                merged.buttons.button1 = cleanButton(saved.buttons && saved.buttons.button1, d.buttons.button1);
+                merged.buttons.button2 = cleanButton(saved.buttons && saved.buttons.button2, d.buttons.button2);
+                merged.buttons.account = cleanButton(saved.buttons && saved.buttons.account, d.buttons.account);
+                const rawClones = saved.buttons && Array.isArray(saved.buttons.clones) ? saved.buttons.clones : [];
+                merged.buttons.clones = rawClones.map((raw, i) => {
+                  const fb = Object.assign({}, d.buttons.button2, { text: '', locked: true, action: 'gallery', x: 24 + i * 4, y: 280 + i * 4 });
+                  return cleanButton(raw, fb);
+                });
+                merged.account.title = saved.account && typeof saved.account.title === 'string' ? saved.account.title : d.account.title;
+                merged.account.email = saved.account && typeof saved.account.email === 'string' ? saved.account.email : d.account.email;
+                merged.editor.open = false;
+                merged.editor.collapsed = !!(saved.editor && saved.editor.collapsed);
+                return merged;
+              }
+          
+              function loadState() {
+                try {
+                  const raw = localStorage.getItem(LS_KEY);
+                  return mergeState(raw ? JSON.parse(raw) : null);
+                } catch (err) {
+                  console.warn('Settings were unreadable, using defaults.', err);
+                  return freshDefaults();
+                }
+              }
+          
+              function saveState() {
+                try {
+                  localStorage.setItem(LS_KEY, JSON.stringify(state));
+                } catch (err) {
+                  console.warn('Could not save settings.', err);
+                }
+              }
+          
+              function openDb() {
+                return new Promise(resolve => {
+                  if (!('indexedDB' in window)) {
+                    console.warn('IndexedDB unavailable. Images will not persist.');
+                    resolve(null);
+                    return;
+                  }
+                  const req = indexedDB.open(DB_NAME, DB_VERSION);
+                  req.onupgradeneeded = () => {
+                    const database = req.result;
+                    if (!database.objectStoreNames.contains(STORE)) database.createObjectStore(STORE);
+                  };
+                  req.onsuccess = () => resolve(req.result);
+                  req.onerror = () => {
+                    console.warn('IndexedDB failed to open.', req.error);
+                    resolve(null);
+                  };
+                });
+              }
+          
+              function txStore(mode = 'readonly') {
+                if (!db) return null;
+                try {
+                  return db.transaction(STORE, mode).objectStore(STORE);
+                } catch (err) {
+                  console.warn('IndexedDB transaction failed.', err);
+                  return null;
+                }
+              }
+          
+              function putImage(id, blob) {
+                return new Promise(resolve => {
+                  const store = txStore('readwrite');
+                  if (!store) { resolve(false); return; }
+                  const req = store.put(blob, id);
+                  req.onsuccess = () => resolve(true);
+                  req.onerror = () => { console.warn('Image save failed.', req.error); resolve(false); };
+                });
+              }
+          
+              function getImage(id) {
+                return new Promise(resolve => {
+                  if (!id) { resolve(null); return; }
+                  const store = txStore('readonly');
+                  if (!store) { resolve(null); return; }
+                  const req = store.get(id);
+                  req.onsuccess = () => resolve(req.result || null);
+                  req.onerror = () => { console.warn('Image read failed.', req.error); resolve(null); };
+                });
+              }
+          
+              function deleteImage(id) {
+                return new Promise(resolve => {
+                  if (!id) { resolve(false); return; }
+                  const store = txStore('readwrite');
+                  if (!store) { resolve(false); return; }
+                  const req = store.delete(id);
+                  req.onsuccess = () => resolve(true);
+                  req.onerror = () => { console.warn('Image delete failed.', req.error); resolve(false); };
+                });
+              }
+          
+              function clearImages() {
+                return new Promise(resolve => {
+                  const store = txStore('readwrite');
+                  if (!store) { resolve(false); return; }
+                  const req = store.clear();
+                  req.onsuccess = () => resolve(true);
+                  req.onerror = () => { console.warn('Image clear failed.', req.error); resolve(false); };
+                });
+              }
+          
+              function newImageId(prefix) {
+                return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+              }
+          
+              function revokeUrls(listName) {
+                if (Array.isArray(objectUrls[listName])) {
+                  objectUrls[listName].forEach(url => URL.revokeObjectURL(url));
+                  objectUrls[listName] = [];
+                } else if (objectUrls[listName]) {
+                  URL.revokeObjectURL(objectUrls[listName]);
+                  objectUrls[listName] = null;
+                }
+              }
+          
+              async function filesToImageIds(files, prefix) {
+                const ids = [];
+                if (!files || !files.length) return ids;
+                for (const file of Array.from(files)) {
+                  if (!file || !file.type || !file.type.startsWith('image/')) continue;
+                  const id = newImageId(prefix);
+                  const ok = await putImage(id, file);
+                  if (ok) ids.push(id);
+                }
+                return ids;
+              }
+          
+              async function renderMainImages() {
+                revokeUrls('main');
+                els.mainCanvas.textContent = '';
+                if (!state.mainImageIds.length) {
+                  const placeholder = document.createElement('div');
+                  placeholder.className = 'empty-main';
+                  placeholder.textContent = 'Upload main page images';
+                  els.mainCanvas.appendChild(placeholder);
+                  return;
+                }
+                let count = 0;
+                for (const id of state.mainImageIds) {
+                  const blob = await getImage(id);
+                  if (!blob) continue;
+                  const url = URL.createObjectURL(blob);
+                  objectUrls.main.push(url);
+                  const img = document.createElement('img');
+                  img.className = 'main-img';
+                  img.alt = '';
+                  img.style.width = `${state.imageSizing.mainWidthPct}%`;
+                  img.style.height = state.imageSizing.mainHeight > 0 ? `${state.imageSizing.mainHeight}px` : 'auto';
+                  img.style.objectFit = state.imageSizing.mainFit;
+                  img.style.marginLeft = state.imageSizing.mainWidthPct < 100 ? 'auto' : '0';
+                  img.style.marginRight = state.imageSizing.mainWidthPct < 100 ? 'auto' : '0';
+                  img.src = url;
+                  img.onerror = () => img.remove();
+                  els.mainCanvas.appendChild(img);
+                  count++;
+                }
+                if (!count) {
+                  const placeholder = document.createElement('div');
+                  placeholder.className = 'empty-main';
+                  placeholder.textContent = 'Upload main page images';
+                  els.mainCanvas.appendChild(placeholder);
+                }
+              }
+          
+              function setBottomOverlayElementBox(el) {
+                if (!el) return;
+                el.style.width = `${bottomOverlayPixelWidth()}px`;
+                el.style.height = `${Math.round(state.bottomOverlay.height)}px`;
+                el.style.left = `${bottomOverlayCssLeft()}px`;
+                el.style.top = `${bottomOverlayCssTop()}px`;
+                el.style.right = 'auto';
+                el.style.bottom = 'auto';
+                el.style.borderTopLeftRadius = `${state.bottomOverlay.topRadius}px`;
+                el.style.borderTopRightRadius = `${state.bottomOverlay.topRadius}px`;
+                el.style.transform = 'translate3d(-50%, 0, 0)';
+              }
+          
+              function correctBottomOverlayDrift() {
+                // The bottom overlay is outside the internal scroll container. Re-apply the
+                // saved screen box only; do not use document scroll or visualViewport offsets.
+                if (currentPage !== 'main' || !state.bottomOverlayImageId) return;
+                if (els.bottomOverlay.classList.contains('visible')) setBottomOverlayElementBox(els.bottomOverlay);
+                if (els.bottomOverlayEditFrame.classList.contains('visible')) setBottomOverlayElementBox(els.bottomOverlayEditFrame);
+              }
+          
+              function renderBottomOverlayEditFrame() {
+                const frame = els.bottomOverlayEditFrame;
+                const img = els.bottomOverlay;
+                if (!frame) return;
+                const shouldShow = currentPage === 'main' && state.bottomOverlayImageId && img.classList.contains('visible');
+                if (!shouldShow) {
+                  frame.classList.remove('visible');
+                  if (!img.classList.contains('visible')) els.bottomOverlayLayer.classList.remove('visible');
+                  return;
+                }
+                els.bottomOverlayLayer.classList.add('visible');
+                ensureBottomOverlayScreenY();
+                setBottomOverlayElementBox(frame);
+                frame.classList.add('visible');
+              }
+          
+              async function renderBottomOverlay() {
+                revokeUrls('bottom');
+                const img = els.bottomOverlay;
+                img.classList.remove('visible');
+                els.bottomOverlayLayer.classList.remove('visible');
+                img.removeAttribute('src');
+                renderBottomOverlayEditFrame();
+                if (!state.bottomOverlayImageId) return;
+                const blob = await getImage(state.bottomOverlayImageId);
+                if (!blob) return;
+                const url = URL.createObjectURL(blob);
+                objectUrls.bottom = url;
+                img.onload = renderBottomOverlayEditFrame;
+                img.src = url;
+                ensureBottomOverlayScreenY();
+                img.style.objectFit = state.bottomOverlay.fit;
+                setBottomOverlayElementBox(img);
+                img.classList.add('visible');
+                els.bottomOverlayLayer.classList.add('visible');
+                renderBottomOverlayEditFrame();
+                requestAnimationFrame(correctBottomOverlayDrift);
+              }
+          
+              async function renderPhotoPage() {
+                revokeUrls('photo');
+                els.photoContent.textContent = '';
+                const blob = await getImage(state.photoImageId);
+                if (!blob) {
+                  const placeholder = document.createElement('div');
+                  placeholder.className = 'photo-placeholder';
+                  placeholder.textContent = 'Upload a target photo for button one in Creative mode.';
+                  els.photoContent.appendChild(placeholder);
+                  return;
+                }
+                const url = URL.createObjectURL(blob);
+                objectUrls.photo = url;
+                const img = document.createElement('img');
+                img.id = 'singlePhotoImg';
+                img.alt = '';
+                img.style.objectFit = state.imageSizing.singleFit;
+                img.src = url;
+                img.onerror = () => {
+                  els.photoContent.innerHTML = '<div class="photo-placeholder">The saved photo could not be loaded.</div>';
+                };
+                els.photoContent.appendChild(img);
+              }
+          
+              async function renderGalleryPage() {
+                revokeUrls('gallery');
+                els.galleryStrip.textContent = '';
+                if (!state.galleryImageIds.length) {
+                  const placeholder = document.createElement('div');
+                  placeholder.className = 'gallery-placeholder';
+                  placeholder.textContent = 'Upload gallery photos in Creative mode.';
+                  els.galleryStrip.appendChild(placeholder);
+                  return;
+                }
+                let count = 0;
+                for (const id of state.galleryImageIds) {
+                  const blob = await getImage(id);
+                  if (!blob) continue;
+                  const url = URL.createObjectURL(blob);
+                  objectUrls.gallery.push(url);
+                  const slide = document.createElement('div');
+                  slide.className = 'gallery-slide';
+                  const img = document.createElement('img');
+                  img.alt = '';
+                  img.style.objectFit = state.imageSizing.galleryFit;
+                  img.src = url;
+                  img.onerror = () => slide.remove();
+                  slide.appendChild(img);
+                  els.galleryStrip.appendChild(slide);
+                  count++;
+                }
+                if (!count) {
+                  const placeholder = document.createElement('div');
+                  placeholder.className = 'gallery-placeholder';
+                  placeholder.textContent = 'The saved gallery photos could not be loaded.';
+                  els.galleryStrip.appendChild(placeholder);
+                }
+              }
+          
+              function getAllRenderableButtons() {
+                const base = [
+                  { id: 'button1', label: 'Button one', data: state.buttons.button1 },
+                  { id: 'button2', label: 'Button two', data: state.buttons.button2 },
+                  { id: 'account', label: 'Account button', data: state.buttons.account }
+                ];
+                state.buttons.clones.forEach((clone, index) => {
+                  base.push({ id: `clone-${index}`, label: `Button two clone ${index + 1}`, data: clone });
+                });
+                return base;
+              }
+          
+              function getButtonData(id) {
+                if (id === 'button1') return state.buttons.button1;
+                if (id === 'button2') return state.buttons.button2;
+                if (id === 'account') return state.buttons.account;
+                if (id.startsWith('clone-')) {
+                  const index = Number(id.slice(6));
+                  return state.buttons.clones[index] || null;
+                }
+                return null;
+              }
+          
+              function renderedTop(button) {
+                return button.locked ? button.y : button.y - mainScrollY();
+              }
+          
+              function getButtonRectFromDom(id) {
+                const el = els.overlayLayer.querySelector(`[data-button-id="${CSS.escape(id)}"]`);
+                return el ? el.getBoundingClientRect() : null;
+              }
+          
+              function createButtonElement(id) {
+                const div = document.createElement('div');
+                div.className = 'tap-button';
+                div.dataset.buttonId = id;
+                div.setAttribute('role', 'button');
+                const text = document.createElement('span');
+                text.className = 'button-text';
+                const handle = document.createElement('span');
+                handle.className = 'resize-handle';
+                handle.dataset.resizeHandle = '1';
+                div.appendChild(text);
+                div.appendChild(handle);
+                els.overlayLayer.appendChild(div);
+                buttonElements.set(id, div);
+                return div;
+              }
+          
+              function renderButtonsNow() {
+                renderQueued = false;
+                if (currentPage !== 'main') return;
+          
+                const alive = new Set();
+                for (const item of getAllRenderableButtons()) {
+                  const b = item.data;
+                  alive.add(item.id);
+                  const div = buttonElements.get(item.id) || createButtonElement(item.id);
+                  div.className = 'tap-button' + (b.transparent ? ' transparent-normal' : '');
+                  div.setAttribute('aria-label', item.label);
+                  div.style.transform = `translate3d(${Math.round(b.x)}px, ${Math.round(renderedTop(b))}px, 0)`;
+                  div.style.width = `${Math.round(b.width)}px`;
+                  div.style.height = `${Math.round(b.height)}px`;
+                  div.style.borderRadius = `${Math.round(b.radius)}px`;
+                  div.style.background = b.transparent ? 'transparent' : b.color;
+                  const text = div.querySelector('.button-text');
+                  if (text && text.textContent !== (b.text || '')) text.textContent = b.text || '';
+                }
+          
+                for (const [id, el] of buttonElements.entries()) {
+                  if (!alive.has(id)) {
+                    el.remove();
+                    buttonElements.delete(id);
+                  }
+                }
+              }
+          
+              function scheduleButtonRender() {
+                if (renderQueued) return;
+                renderQueued = true;
+                requestAnimationFrame(renderButtonsNow);
+              }
+          
+              function runScrollRenderLoop() {
+                scrollLoopRaf = 0;
+                renderButtonsNow();
+                applyBottomOverlaySizingStyles();
+                if (performance.now() < scrollLoopUntil) {
+                  scrollLoopRaf = requestAnimationFrame(runScrollRenderLoop);
+                }
+              }
+          
+              function startScrollRenderLoop() {
+                scrollLoopUntil = performance.now() + 260;
+                if (!scrollLoopRaf) scrollLoopRaf = requestAnimationFrame(runScrollRenderLoop);
+              }
+          
+              function setBodyMode(page) {
+                els.body.classList.toggle('main-mode', page === 'main');
+                els.body.classList.toggle('photo-mode', page === 'photo');
+                els.body.classList.toggle('gallery-mode', page === 'gallery');
+                els.body.classList.toggle('account-mode', page === 'account');
+              }
+          
+              function updatePageVisibility() {
+                const pages = {
+                  main: els.mainPage,
+                  photo: els.photoPage,
+                  gallery: els.galleryPage,
+                  account: els.accountPage
+                };
+                Object.entries(pages).forEach(([name, el]) => el.classList.toggle('active', name === currentPage));
+                setBodyMode(currentPage);
+                if (currentPage !== 'main') closeEditor(false, true);
+                renderBottomOverlayEditFrame();
+                scheduleButtonRender();
+              }
+          
+              function pushHistory(page, editorOpen = false) {
+                try {
+                  history.pushState({ page, editorOpen }, '', page === 'main' ? '#main' : `#${page}`);
+                } catch (_) {}
+              }
+          
+              function replaceHistory(page, editorOpen = false) {
+                try {
+                  history.replaceState({ page, editorOpen }, '', page === 'main' ? '#main' : `#${page}`);
+                } catch (_) {}
+              }
+          
+              async function showPage(page, push = true) {
+                currentPage = page;
+                if (push) pushHistory(page, false);
+                updatePageVisibility();
+                if (page === 'photo') await renderPhotoPage();
+                if (page === 'gallery') await renderGalleryPage();
+                if (page === 'account') renderAccountPage();
+              }
+          
+              function goMain(push = true) {
+                currentPage = 'main';
+                if (push) pushHistory('main', false);
+                updatePageVisibility();
+              }
+          
+              function backToMain() {
+                if (currentPage === 'main') return;
+                if (history.length > 1) {
+                  history.back();
+                } else {
+                  goMain(false);
+                }
+              }
+          
+              function renderAccountPage() {
+                els.profileTitle.textContent = state.account.title || 'Personal';
+                els.profileEmail.textContent = state.account.email || 'jtavaglione@hotmail.co.uk';
+              }
+          
+              function openEditor(push = true) {
+                if (currentPage !== 'main') return;
+                state.editor.open = true;
+                els.body.classList.add('editing');
+                els.editorPanel.classList.toggle('collapsed', !!state.editor.collapsed);
+                syncControlsFromState();
+                renderBottomOverlayEditFrame();
+                scheduleButtonRender();
+                saveState();
+                if (push) pushHistory('main', true);
+              }
+          
+              function closeEditor(save = true, noHistory = false) {
+                state.editor.open = false;
+                cancelColorSample();
+                els.body.classList.remove('editing');
+                dragState = null;
+                renderBottomOverlayEditFrame();
+                scheduleButtonRender();
+                if (save) saveState();
+                if (!noHistory && currentPage === 'main') replaceHistory('main', false);
+              }
+          
+              function togglePanelCollapsed() {
+                state.editor.collapsed = !state.editor.collapsed;
+                els.editorPanel.classList.toggle('collapsed', state.editor.collapsed);
+                document.getElementById('collapsePanelBtn').textContent = state.editor.collapsed ? 'Expand' : 'Collapse';
+                saveState();
+              }
+          
+              function setButtonLock(id, locked) {
+                const b = getButtonData(id);
+                if (!b) return;
+                const currentlyLocked = !!b.locked;
+                if (locked && !currentlyLocked) {
+                  const rect = getButtonRectFromDom(id);
+                  b.x = rect ? rect.left : b.x;
+                  b.y = rect ? rect.top : (b.y - mainScrollY());
+                  b.locked = true;
+                } else if (!locked && currentlyLocked) {
+                  b.y = b.y + mainScrollY();
+                  b.locked = false;
+                }
+                saveState();
+                syncControlsFromState();
+                scheduleButtonRender();
+              }
+          
+              function lockExactlyNow(id) {
+                const b = getButtonData(id);
+                if (!b) return;
+                const rect = getButtonRectFromDom(id);
+                if (rect) {
+                  b.x = rect.left;
+                  b.y = rect.top;
+                } else if (!b.locked) {
+                  b.y = b.y - mainScrollY();
+                }
+                b.locked = true;
+                saveState();
+                syncControlsFromState();
+                scheduleButtonRender();
+              }
+          
+              function cloneButtonTwoHere() {
+                const source = state.buttons.button2;
+                const rect = getButtonRectFromDom('button2');
+                const clone = Object.assign({}, source, {
+                  x: rect ? rect.left : source.x,
+                  y: rect ? rect.top : renderedTop(source),
+                  locked: true,
+                  action: 'gallery'
+                });
+                state.buttons.clones.push(clone);
+                saveState();
+                scheduleButtonRender();
+              }
+          
+              function buttonAction(button) {
+                if (!button || state.editor.open || currentPage !== 'main') return;
+                if (button.action === 'photo') showPage('photo', true);
+                if (button.action === 'gallery') showPage('gallery', true);
+                if (button.action === 'account') showPage('account', true);
+              }
+          
+              function onOverlayPointerDown(event) {
+                const buttonEl = event.target.closest('.tap-button');
+                if (!buttonEl) return;
+                const id = buttonEl.dataset.buttonId;
+                const b = getButtonData(id);
+                if (!b) return;
+          
+                if (!state.editor.open) return;
+          
+                event.preventDefault();
+                event.stopPropagation();
+                const rect = buttonEl.getBoundingClientRect();
+                dragState = {
+                  id,
+                  mode: event.target.dataset.resizeHandle ? 'resize' : 'drag',
+                  pointerId: event.pointerId,
+                  startClientX: event.clientX,
+                  startClientY: event.clientY,
+                  startX: b.x,
+                  startY: b.y,
+                  startWidth: b.width,
+                  startHeight: b.height,
+                  startScrollY: mainScrollY(),
+                  startRenderedTop: rect.top,
+                  moved: false
+                };
+                try { buttonEl.setPointerCapture(event.pointerId); } catch (_) {}
+              }
+          
+              function onOverlayClick(event) {
+                const buttonEl = event.target.closest('.tap-button');
+                if (!buttonEl || state.editor.open) return;
+                const b = getButtonData(buttonEl.dataset.buttonId);
+                buttonAction(b);
+              }
+          
+              function onPointerMove(event) {
+                if (!dragState) return;
+                event.preventDefault();
+                const dx = event.clientX - dragState.startClientX;
+                const dy = event.clientY - dragState.startClientY;
+                if (Math.abs(dx) + Math.abs(dy) > 2) dragState.moved = true;
+          
+                if (dragState.kind === 'bottomOverlay') {
+                  ensureBottomOverlayScreenY();
+                  if (dragState.mode === 'overlay-resize') {
+                    const nextWidthPx = Math.max(12, dragState.startPixelWidth + dx);
+                    state.bottomOverlay.widthPct = safeNumber((nextWidthPx / Math.max(1, viewportWidth())) * 100, state.bottomOverlay.widthPct, 5, 400);
+                    state.bottomOverlay.height = safeNumber(dragState.startHeight + dy, state.bottomOverlay.height, 1, 8000);
+                    syncBottomGapFromScreenY();
+                  } else {
+                    state.bottomOverlay.screenY = safeNumber(dragState.startScreenY + dy, dragState.startScreenY, -8000, 8000);
+                    syncBottomGapFromScreenY();
+                  }
+                  applyBottomOverlaySizingStyles();
+                  syncControlsFromState(false);
+                  return;
+                }
+          
+                const b = getButtonData(dragState.id);
+                if (!b) return;
+                if (dragState.mode === 'resize') {
+                  b.width = Math.max(MIN_SIZE, dragState.startWidth + dx);
+                  b.height = Math.max(MIN_SIZE, dragState.startHeight + dy);
+                } else {
+                  b.x = dragState.startX + dx;
+                  if (b.locked) {
+                    b.y = dragState.startY + dy;
+                  } else {
+                    const visibleTop = dragState.startRenderedTop + dy;
+                    b.y = visibleTop + mainScrollY();
+                  }
+                }
+                syncControlsFromState(false);
+                scheduleButtonRender();
+              }
+          
+              function onPointerUp(event) {
+                if (!dragState) return;
+                event.preventDefault();
+                saveState();
+                dragState = null;
+                renderBottomOverlayEditFrame();
+                scheduleButtonRender();
+              }
+          
+              function applyBottomOverlaySizingStyles() {
+                const img = els.bottomOverlay;
+                ensureBottomOverlayScreenY();
+                img.style.objectFit = state.bottomOverlay.fit;
+                setBottomOverlayElementBox(img);
+                renderBottomOverlayEditFrame();
+                requestAnimationFrame(correctBottomOverlayDrift);
+              }
+          
+              function onBottomOverlayPointerDown(event) {
+                if (!state.editor.open || currentPage !== 'main' || !state.bottomOverlayImageId) return;
+                if (!els.bottomOverlay.classList.contains('visible')) return;
+                event.preventDefault();
+                event.stopPropagation();
+                const rect = els.bottomOverlay.getBoundingClientRect();
+                dragState = {
+                  kind: 'bottomOverlay',
+                  mode: event.target.dataset.overlayResize ? 'overlay-resize' : 'overlay-drag',
+                  pointerId: event.pointerId,
+                  startClientX: event.clientX,
+                  startClientY: event.clientY,
+                  startPixelWidth: rect.width || window.innerWidth,
+                  startHeight: state.bottomOverlay.height,
+                  startScreenY: ensureBottomOverlayScreenY(),
+                  startBottomGap: state.bottomOverlay.bottomGap,
+                  moved: false
+                };
+                try { els.bottomOverlayEditFrame.setPointerCapture(event.pointerId); } catch (_) {}
+              }
+          
+              function setControlValue(id, value) {
+                const el = document.getElementById(id);
+                if (!el) return;
+                if (el.type === 'checkbox') el.checked = !!value;
+                else el.value = value ?? '';
+              }
+          
+              function syncControlsFromState(updateText = true) {
+                const b1 = state.buttons.button1;
+                const b2 = state.buttons.button2;
+                const acc = state.buttons.account;
+                if (updateText) {
+                  setControlValue('b1Text', b1.text);
+                  setControlValue('b2Text', b2.text);
+                  setControlValue('accountTitle', state.account.title);
+                  setControlValue('accountEmail', state.account.email);
+                }
+                setControlValue('b1Width', Math.round(b1.width));
+                setControlValue('b1Height', Math.round(b1.height));
+                setControlValue('b1Radius', Math.round(b1.radius));
+                setControlValue('b1Color', validHex(b1.color, '#c81924'));
+                setControlValue('b1Hex', validHex(b1.color, '#c81924'));
+          
+                setControlValue('b2Width', Math.round(b2.width));
+                setControlValue('b2Height', Math.round(b2.height));
+                setControlValue('b2Radius', Math.round(b2.radius));
+                setControlValue('b2Color', validHex(b2.color, '#1266dd'));
+                setControlValue('b2Hex', validHex(b2.color, '#1266dd'));
+                setControlValue('b2Transparent', b2.transparent);
+                setControlValue('b2Locked', b2.locked);
+          
+                setControlValue('accountWidth', Math.round(acc.width));
+                setControlValue('accountHeight', Math.round(acc.height));
+                setControlValue('accountRadius', Math.round(acc.radius));
+                setControlValue('accountColor', validHex(acc.color, '#000000'));
+                setControlValue('accountHex', validHex(acc.color, '#000000'));
+                setControlValue('accountTransparent', acc.transparent);
+                setControlValue('accountLocked', acc.locked);
+          
+                setControlValue('mainImageWidth', state.imageSizing.mainWidthPct);
+                setControlValue('mainImageHeight', state.imageSizing.mainHeight);
+                setControlValue('mainImageFit', state.imageSizing.mainFit);
+                setControlValue('singlePhotoFit', state.imageSizing.singleFit);
+                setControlValue('galleryImageFit', state.imageSizing.galleryFit);
+                setControlValue('overlayWidth', state.bottomOverlay.widthPct);
+                setControlValue('overlayHeight', state.bottomOverlay.height);
+                setControlValue('overlayBottomGap', state.bottomOverlay.bottomGap);
+                setControlValue('overlayTopRadius', state.bottomOverlay.topRadius);
+                setControlValue('overlayFit', state.bottomOverlay.fit);
+                document.getElementById('collapsePanelBtn').textContent = state.editor.collapsed ? 'Expand' : 'Collapse';
+              }
+          
+              function bindNumber(id, getter, setter, min, max, afterChange) {
+                const el = document.getElementById(id);
+                el.addEventListener('input', () => {
+                  const value = safeNumber(el.value, getter(), min, max);
+                  setter(value);
+                  saveState();
+                  if (typeof afterChange === 'function') afterChange();
+                  scheduleButtonRender();
+                });
+              }
+          
+              function bindFit(id, getter, setter, afterChange) {
+                const el = document.getElementById(id);
+                el.addEventListener('change', () => {
+                  const value = validFit(el.value, getter());
+                  setter(value);
+                  saveState();
+                  if (typeof afterChange === 'function') afterChange();
+                  scheduleButtonRender();
+                });
+              }
+          
+              function bindText(id, setter) {
+                const el = document.getElementById(id);
+                el.addEventListener('input', () => {
+                  setter(el.value);
+                  saveState();
+                  scheduleButtonRender();
+                  renderAccountPage();
+                });
+              }
+          
+              function bindHex(colorId, hexId, buttonId) {
+                const color = document.getElementById(colorId);
+                const hex = document.getElementById(hexId);
+                color.addEventListener('input', () => {
+                  const b = getButtonData(buttonId);
+                  b.color = validHex(color.value, b.color);
+                  hex.value = b.color;
+                  saveState();
+                  scheduleButtonRender();
+                });
+                hex.addEventListener('input', () => {
+                  const b = getButtonData(buttonId);
+                  const parsed = validHex(hex.value, b.color);
+                  b.color = parsed;
+                  color.value = parsed;
+                  saveState();
+                  scheduleButtonRender();
+                });
+              }
+          
+              function resetFileInput(input) {
+                try { input.value = ''; } catch (_) {}
+              }
+          
+              async function replaceImageId(oldId, file, prefix) {
+                if (!file || !file.type || !file.type.startsWith('image/')) return oldId || null;
+                const id = newImageId(prefix);
+                const ok = await putImage(id, file);
+                if (ok) {
+                  if (oldId) await deleteImage(oldId);
+                  return id;
+                }
+                return oldId || null;
+              }
+          
+          
+          
+              function rgbToHex(r, g, b) {
+                return '#' + [r, g, b].map(n => Math.max(0, Math.min(255, n)).toString(16).padStart(2, '0')).join('');
+              }
+          
+              function pointInsideRect(x, y, rect) {
+                return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
+              }
+          
+              function imageAtPoint(x, y) {
+                const bottom = els.bottomOverlay;
+                if (bottom && bottom.classList.contains('visible') && bottom.complete && bottom.naturalWidth) {
+                  const rect = bottom.getBoundingClientRect();
+                  if (pointInsideRect(x, y, rect)) return bottom;
+                }
+                const stack = document.elementsFromPoint(x, y);
+                for (const el of stack) {
+                  if (el && el.tagName === 'IMG' && (el.classList.contains('main-img') || el.id === 'bottomOverlay')) {
+                    return el;
+                  }
+                }
+                return null;
+              }
+          
+              function sourcePointForImage(img, clientX, clientY) {
+                const rect = img.getBoundingClientRect();
+                if (!rect.width || !rect.height || !img.naturalWidth || !img.naturalHeight) return null;
+                let x = clientX - rect.left;
+                let y = clientY - rect.top;
+                const fit = getComputedStyle(img).objectFit || 'fill';
+                const nw = img.naturalWidth;
+                const nh = img.naturalHeight;
+          
+                if (fit === 'contain' || fit === 'cover') {
+                  const scale = fit === 'contain' ? Math.min(rect.width / nw, rect.height / nh) : Math.max(rect.width / nw, rect.height / nh);
+                  const drawW = nw * scale;
+                  const drawH = nh * scale;
+                  const offX = (rect.width - drawW) / 2;
+                  const offY = (rect.height - drawH) / 2;
+                  x = (x - offX) / scale;
+                  y = (y - offY) / scale;
+                  if (x < 0 || y < 0 || x >= nw || y >= nh) return null;
+                } else {
+                  x = x / rect.width * nw;
+                  y = y / rect.height * nh;
+                }
+          
+                return { x: Math.max(0, Math.min(nw - 1, Math.floor(x))), y: Math.max(0, Math.min(nh - 1, Math.floor(y))) };
+              }
+          
+              function sampleImageColor(img, clientX, clientY) {
+                if (!img || !img.complete || !img.naturalWidth) return null;
+                const point = sourcePointForImage(img, clientX, clientY);
+                if (!point) return null;
+                try {
+                  const canvas = document.createElement('canvas');
+                  canvas.width = 1;
+                  canvas.height = 1;
+                  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+                  ctx.drawImage(img, point.x, point.y, 1, 1, 0, 0, 1, 1);
+                  const data = ctx.getImageData(0, 0, 1, 1).data;
+                  return rgbToHex(data[0], data[1], data[2]);
+                } catch (err) {
+                  console.warn('Could not sample image colour.', err);
+                  return null;
+                }
+              }
+          
+              function startColorSample(buttonId) {
+                colorPickTarget = buttonId;
+                state.editor.collapsed = true;
+                els.editorPanel.classList.add('collapsed');
+                document.getElementById('collapsePanelBtn').textContent = 'Expand';
+                els.sampleToast.textContent = 'Tap a visible image to sample its colour';
+                els.body.classList.add('color-sampling');
+                saveState();
+              }
+          
+              function cancelColorSample() {
+                colorPickTarget = null;
+                els.body.classList.remove('color-sampling');
+              }
+          
+              function applySampledColor(buttonId, hex) {
+                const b = getButtonData(buttonId);
+                if (!b) return;
+                b.color = validHex(hex, b.color);
+                b.transparent = false;
+                saveState();
+                syncControlsFromState();
+                scheduleButtonRender();
+              }
+          
+              function onColorSamplePointerDown(event) {
+                if (!colorPickTarget) return;
+                if (event.target.closest('#editorPanel')) return;
+                event.preventDefault();
+                event.stopPropagation();
+                if (currentPage !== 'main') { cancelColorSample(); return; }
+                const img = imageAtPoint(event.clientX, event.clientY);
+                const hex = sampleImageColor(img, event.clientX, event.clientY);
+                if (!hex) {
+                  els.sampleToast.textContent = 'No image pixel found there. Tap directly on a visible image.';
+                  return;
+                }
+                applySampledColor(colorPickTarget, hex);
+                cancelColorSample();
+              }
+          
+              let mainTouchLastY = 0;
+          
+              function preventDocumentRubberBand(event) {
+                const panel = event.target.closest && event.target.closest('#editorPanel');
+                if (panel) return;
+                const inMainScroll = event.target.closest && event.target.closest('#mainScroll');
+                if (currentPage === 'main' && !inMainScroll) {
+                  event.preventDefault();
+                }
+              }
+          
+              function onMainScrollTouchStart(event) {
+                if (!event.touches || !event.touches.length) return;
+                mainTouchLastY = event.touches[0].clientY;
+              }
+          
+              function onMainScrollTouchMove(event) {
+                const scroller = els.mainScroll;
+                if (!scroller || !event.touches || !event.touches.length) return;
+                const y = event.touches[0].clientY;
+                const dy = y - mainTouchLastY;
+                mainTouchLastY = y;
+                const maxScroll = Math.max(0, scroller.scrollHeight - scroller.clientHeight);
+                const atTop = scroller.scrollTop <= 0;
+                const atBottom = scroller.scrollTop >= maxScroll - 1;
+                if (maxScroll <= 0 || (atTop && dy > 0) || (atBottom && dy < 0)) {
+                  event.preventDefault();
+                }
+              }
+          
+              function bindFileInputs() {
+                document.getElementById('addMainImages').addEventListener('change', async e => {
+                  const ids = await filesToImageIds(e.target.files, 'main');
+                  if (ids.length) {
+                    state.mainImageIds.push(...ids);
+                    saveState();
+                    await renderMainImages();
+                    scheduleButtonRender();
+                  }
+                  resetFileInput(e.target);
+                });
+          
+                document.getElementById('replaceMainImages').addEventListener('change', async e => {
+                  if (!e.target.files || !e.target.files.length) { resetFileInput(e.target); return; }
+                  const old = state.mainImageIds.slice();
+                  const ids = await filesToImageIds(e.target.files, 'main');
+                  if (ids.length) {
+                    for (const id of old) await deleteImage(id);
+                    state.mainImageIds = ids;
+                    saveState();
+                    await renderMainImages();
+                    scheduleButtonRender();
+                  }
+                  resetFileInput(e.target);
+                });
+          
+                document.getElementById('singlePhotoUpload').addEventListener('change', async e => {
+                  const file = e.target.files && e.target.files[0];
+                  if (file) {
+                    state.photoImageId = await replaceImageId(state.photoImageId, file, 'single');
+                    saveState();
+                  }
+                  resetFileInput(e.target);
+                });
+          
+                document.getElementById('galleryUpload').addEventListener('change', async e => {
+                  if (!e.target.files || !e.target.files.length) { resetFileInput(e.target); return; }
+                  const old = state.galleryImageIds.slice();
+                  const ids = await filesToImageIds(e.target.files, 'gallery');
+                  if (ids.length) {
+                    for (const id of old) await deleteImage(id);
+                    state.galleryImageIds = ids;
+                    saveState();
+                  }
+                  resetFileInput(e.target);
+                });
+          
+                document.getElementById('bottomOverlayUpload').addEventListener('change', async e => {
+                  const file = e.target.files && e.target.files[0];
+                  if (file) {
+                    state.bottomOverlayImageId = await replaceImageId(state.bottomOverlayImageId, file, 'bottom');
+                    saveState();
+                    await renderBottomOverlay();
+                  }
+                  resetFileInput(e.target);
+                });
+              }
+          
+              function bindControls() {
+                document.getElementById('helpButton').addEventListener('click', () => openEditor(true));
+                document.getElementById('closeEditorBtn').addEventListener('click', () => closeEditor(true, false));
+                document.getElementById('collapsePanelBtn').addEventListener('click', togglePanelCollapsed);
+                document.getElementById('myTicketsReturn').addEventListener('click', () => goMain(true));
+                document.querySelectorAll('[data-back-main]').forEach(btn => btn.addEventListener('click', backToMain));
+          
+                els.overlayLayer.addEventListener('pointerdown', onOverlayPointerDown);
+                els.overlayLayer.addEventListener('click', onOverlayClick);
+                window.addEventListener('pointermove', onPointerMove, { passive: false });
+                window.addEventListener('pointerup', onPointerUp, { passive: false });
+                window.addEventListener('pointercancel', onPointerUp, { passive: false });
+                els.mainScroll.addEventListener('scroll', startScrollRenderLoop, { passive: true });
+                els.mainScroll.addEventListener('touchstart', onMainScrollTouchStart, { passive: true });
+                els.mainScroll.addEventListener('touchmove', onMainScrollTouchMove, { passive: false });
+                document.addEventListener('touchmove', preventDocumentRubberBand, { passive: false });
+                window.addEventListener('wheel', startScrollRenderLoop, { passive: true });
+                window.addEventListener('resize', () => { scheduleButtonRender(); applyBottomOverlaySizingStyles(); }, { passive: true });
+                if (window.visualViewport) {
+                  window.visualViewport.addEventListener('resize', () => { scheduleButtonRender(); applyBottomOverlaySizingStyles(); }, { passive: true });
+                }
+                els.bottomOverlayEditFrame.addEventListener('pointerdown', onBottomOverlayPointerDown);
+                document.addEventListener('pointerdown', onColorSamplePointerDown, true);
+          
+                bindText('b1Text', value => { state.buttons.button1.text = value; });
+                bindText('b2Text', value => { state.buttons.button2.text = value; });
+                bindText('accountTitle', value => { state.account.title = value; });
+                bindText('accountEmail', value => { state.account.email = value; });
+          
+                bindNumber('b1Width', () => state.buttons.button1.width, v => state.buttons.button1.width = v, MIN_SIZE, 3000);
+                bindNumber('b1Height', () => state.buttons.button1.height, v => state.buttons.button1.height = v, MIN_SIZE, 3000);
+                bindNumber('b1Radius', () => state.buttons.button1.radius, v => state.buttons.button1.radius = v, 0, 999);
+                bindHex('b1Color', 'b1Hex', 'button1');
+                document.getElementById('sampleB1Color').addEventListener('click', () => startColorSample('button1'));
+          
+                bindNumber('b2Width', () => state.buttons.button2.width, v => state.buttons.button2.width = v, MIN_SIZE, 3000);
+                bindNumber('b2Height', () => state.buttons.button2.height, v => state.buttons.button2.height = v, MIN_SIZE, 3000);
+                bindNumber('b2Radius', () => state.buttons.button2.radius, v => state.buttons.button2.radius = v, 0, 999);
+                bindHex('b2Color', 'b2Hex', 'button2');
+                document.getElementById('sampleB2Color').addEventListener('click', () => startColorSample('button2'));
+          
+                bindNumber('accountWidth', () => state.buttons.account.width, v => state.buttons.account.width = v, MIN_SIZE, 3000);
+                bindNumber('accountHeight', () => state.buttons.account.height, v => state.buttons.account.height = v, MIN_SIZE, 3000);
+                bindNumber('accountRadius', () => state.buttons.account.radius, v => state.buttons.account.radius = v, 0, 999);
+                bindHex('accountColor', 'accountHex', 'account');
+                document.getElementById('sampleAccountColor').addEventListener('click', () => startColorSample('account'));
+          
+                bindNumber('mainImageWidth', () => state.imageSizing.mainWidthPct, v => state.imageSizing.mainWidthPct = v, 10, 400, renderMainImages);
+                bindNumber('mainImageHeight', () => state.imageSizing.mainHeight, v => state.imageSizing.mainHeight = v, 0, 8000, renderMainImages);
+                bindFit('mainImageFit', () => state.imageSizing.mainFit, v => state.imageSizing.mainFit = v, renderMainImages);
+                bindFit('singlePhotoFit', () => state.imageSizing.singleFit, v => state.imageSizing.singleFit = v);
+                bindFit('galleryImageFit', () => state.imageSizing.galleryFit, v => state.imageSizing.galleryFit = v);
+          
+                bindNumber('overlayWidth', () => state.bottomOverlay.widthPct, v => state.bottomOverlay.widthPct = v, 5, 400, applyBottomOverlaySizingStyles);
+                bindNumber('overlayHeight', () => state.bottomOverlay.height, v => { state.bottomOverlay.height = v; syncBottomGapFromScreenY(); }, 1, 8000, applyBottomOverlaySizingStyles);
+                bindNumber('overlayBottomGap', () => state.bottomOverlay.bottomGap, v => { state.bottomOverlay.bottomGap = v; state.bottomOverlay.screenY = calculateOverlayScreenYFromBottomGap(); }, 0, 3000, applyBottomOverlaySizingStyles);
+                bindNumber('overlayTopRadius', () => state.bottomOverlay.topRadius, v => state.bottomOverlay.topRadius = v, 0, 500, applyBottomOverlaySizingStyles);
+                bindFit('overlayFit', () => state.bottomOverlay.fit, v => state.bottomOverlay.fit = v, applyBottomOverlaySizingStyles);
+          
+                document.getElementById('b2Transparent').addEventListener('change', e => {
+                  state.buttons.button2.transparent = e.target.checked;
+                  saveState(); scheduleButtonRender();
+                });
+                document.getElementById('b2Locked').addEventListener('change', e => setButtonLock('button2', e.target.checked));
+                document.getElementById('accountTransparent').addEventListener('change', e => {
+                  state.buttons.account.transparent = e.target.checked;
+                  saveState(); scheduleButtonRender();
+                });
+                document.getElementById('accountLocked').addEventListener('change', e => setButtonLock('account', e.target.checked));
+          
+                document.getElementById('lockB2Now').addEventListener('click', () => lockExactlyNow('button2'));
+                document.getElementById('lockAccountNow').addEventListener('click', () => lockExactlyNow('account'));
+                document.getElementById('cloneB2').addEventListener('click', cloneButtonTwoHere);
+                document.getElementById('deleteLastClone').addEventListener('click', () => {
+                  state.buttons.clones.pop(); saveState(); scheduleButtonRender();
+                });
+                document.getElementById('clearClones').addEventListener('click', () => {
+                  state.buttons.clones = []; saveState(); scheduleButtonRender();
+                });
+                document.getElementById('clearGallery').addEventListener('click', async () => {
+                  for (const id of state.galleryImageIds) await deleteImage(id);
+                  state.galleryImageIds = []; saveState();
+                });
+                document.getElementById('clearMainImages').addEventListener('click', async () => {
+                  for (const id of state.mainImageIds) await deleteImage(id);
+                  state.mainImageIds = []; saveState(); await renderMainImages(); scheduleButtonRender();
+                });
+                document.getElementById('clearBottomOverlay').addEventListener('click', async () => {
+                  if (state.bottomOverlayImageId) await deleteImage(state.bottomOverlayImageId);
+                  state.bottomOverlayImageId = null; saveState(); await renderBottomOverlay();
+                });
+                document.getElementById('resetLayout').addEventListener('click', () => {
+                  const d = freshDefaults();
+                  state.buttons = d.buttons;
+                  state.bottomOverlay = d.bottomOverlay;
+                  state.imageSizing = d.imageSizing;
+                  state.account = d.account;
+                  saveState(); syncControlsFromState(); renderAccountPage(); renderMainImages(); renderBottomOverlay(); scheduleButtonRender();
+                });
+                document.getElementById('clearEverything').addEventListener('click', async () => {
+                  await clearImages();
+                  localStorage.removeItem(LS_KEY);
+                  state = freshDefaults();
+                  state.editor.open = true;
+                  saveState();
+                  await renderMainImages();
+                  await renderBottomOverlay();
+                  renderAccountPage();
+                  syncControlsFromState();
+                  scheduleButtonRender();
+                });
+          
+                window.addEventListener('popstate', event => {
+                  const page = event.state && event.state.page ? event.state.page : 'main';
+                  const editorOpen = !!(event.state && event.state.editorOpen);
+                  currentPage = ['main', 'photo', 'gallery', 'account'].includes(page) ? page : 'main';
+                  updatePageVisibility();
+                  if (currentPage === 'main' && editorOpen) openEditor(false);
+                  else closeEditor(true, true);
+                  if (currentPage === 'photo') renderPhotoPage();
+                  if (currentPage === 'gallery') renderGalleryPage();
+                  if (currentPage === 'account') renderAccountPage();
+                });
+              }
+          
+              async function init() {
+                db = await openDb();
+                state = loadState();
+                bindControls();
+                bindFileInputs();
+                replaceHistory('main', false);
+                await renderMainImages();
+                await renderBottomOverlay();
+                renderAccountPage();
+                syncControlsFromState();
+                updatePageVisibility();
+                scheduleButtonRender();
+              }
+          
+              init().catch(err => {
+                console.error(err);
+                els.mainCanvas.innerHTML = '<div class="empty-main">Something went wrong loading the app. Refresh Chrome and try again.</div>';
+              });
+            })();
+            </script>
+          
+          <script>
+          (function () {
+            if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost" || location.hostname === "127.0.0.1")) {
+              window.addEventListener("load", function () {
+                navigator.serviceWorker.register("./sw.js").catch(function () {});
+              });
+            }
+          })();
+          </script>
+          </body>
+          </html>
+          EOF_INDEX_HTML_PHOTO_HELPER
+
+          cat > app/src/main/assets/manifest.webmanifest <<'EOF_WEB_MANIFEST_PHOTO_HELPER'
+          {
+            "name": "Photo Layout Helper",
+            "short_name": "Photo Helper",
+            "description": "A private fullscreen photo layout helper with editable overlay tap zones.",
+            "start_url": "./index.html",
+            "scope": "./",
+            "display": "fullscreen",
+            "display_override": [
+              "fullscreen",
+              "standalone",
+              "minimal-ui",
+              "browser"
+            ],
+            "orientation": "portrait",
+            "background_color": "#000000",
+            "theme_color": "#000000",
+            "icons": [
+              {
+                "src": "icon-192.png",
+                "sizes": "192x192",
+                "type": "image/png",
+                "purpose": "any maskable"
+              },
+              {
+                "src": "icon-512.png",
+                "sizes": "512x512",
+                "type": "image/png",
+                "purpose": "any maskable"
+              }
+            ]
+          }
+          EOF_WEB_MANIFEST_PHOTO_HELPER
+
+          cat > app/src/main/assets/sw.js <<'EOF_SW_JS_PHOTO_HELPER'
+          const CACHE_NAME = "photo-layout-helper-v11";
+          const APP_FILES = [
+            "./",
+            "./index.html",
+            "./manifest.webmanifest",
+            "./icon-192.png",
+            "./icon-512.png"
+          ];
+          
+          self.addEventListener("install", event => {
+            event.waitUntil(
+              caches.open(CACHE_NAME).then(cache => cache.addAll(APP_FILES)).then(() => self.skipWaiting())
+            );
+          });
+          
+          self.addEventListener("activate", event => {
+            event.waitUntil(
+              caches.keys().then(keys => Promise.all(
+                keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key))
+              )).then(() => self.clients.claim())
+            );
+          });
+          
+          self.addEventListener("fetch", event => {
+            if (event.request.method !== "GET") return;
+            event.respondWith(
+              caches.match(event.request).then(cached => cached || fetch(event.request).then(response => {
+                const copy = response.clone();
+                caches.open(CACHE_NAME).then(cache => cache.put(event.request, copy)).catch(() => {});
+                return response;
+              }).catch(() => caches.match("./index.html")))
+            );
+          });
+          EOF_SW_JS_PHOTO_HELPER
+
+          cat > /tmp/EOF_ICON_192_B64_PHOTO_HELPER.b64 <<'EOF_ICON_192_B64_PHOTO_HELPER'
+          iVBORw0KGgoAAAANSUhEUgAAAMAAAADACAIAAADdvvtQAAAEe0lEQVR4nO3dzXHbRgCGYSuTBjjp
+          xjU4rfiWu+65uZW4BnfjGpwDPRyNIssUvv35ED/P1RIHs/tyAYIL+eFyubyDo37bfQCcm4CICIiI
+          gIgIiIiAiAiIiICICIiIgIgIiIiAiAiIiICICIiIgIgIiIiAiAiIiICICIiIgIj8vvsAXvP+4ePu
+          Q2jx5dun3Yfwsoe258JE81NVMbUEpJsDGkraHJBuhthY0s6LaPWMsnEk96xA0plk/VK0YQVSzzzr
+          x3bpCiSdZZYtRetWIPWstGy0FwWknvXWjPmKgNSzy4KRnx6QevaaPf5zA1JPg6mzMDEg9fSYNxe2
+          cxCZFZDlp82kGZkSkHo6zZgXpzAi4wOy/DQbPjuDA1JPv7Fz5BRGpGtT/eevj7sP4Rw+/PG4+xC+
+          G7mdI1kbpXNAktGo/R5OYUQqArL8HNMwbsMC8vnrXEbNV8UKxHkJiIiAiIwJyAXQGQ2ZNSsQEQER
+          qQio58b8uTSMW0VAnFfLl6nXN1PDrdVTaFh7rloCuuoZF+7kFEZEQEQERERARAREREBEBEREQES6
+          biT+/c/j7kM4h7/+fNx9CN+1BCSdN7kOV0NGTmFEKgKy/BzTMG4VAXFeAiIiICICIiIgIgIiIiAi
+          FQE13FE9o4ZxqwiI82r5Luz6Zmq4tXoKDWvPVUtAVz3jwp2cwogIiIiAiAiIiICICIiIgIgIiEjX
+          jUR/YOpOPX9IqSUg6bzJdbgaMnIKI1IRkOXnmIZxqwiI8xIQEQERERARAREREBEBEakIqOGO6hk1
+          jFtFQJxXy3dh/reeN2lYe65aArrqGRfu5BRGREBEBEREQEQERERARAREREBEBEREQEQERERARARE
+          REBEurZz/Mpe3AvVv79FQJu9vofu9q+1JQlomzdtv+z5cxzPCGiP/9bzYhzPfuzz18e2hh4ul0v+
+          Ku8fPuYv8ut4msWdQRz4lXt8+fYpfAWfwlY7lsLTn6x69EBASyULSWdDAlonPw0VNiSgDZKLmLaL
+          aAEtMvCOzu0VGhYhAREREBEBrTD8G4mes5iAiAiIiICICIiIgIgIiIiAVhj+qbtnp6KAiAiIyJiA
+          8o1t/3sDz2Kjzl9DZs0KtEHS0PbvLp4R0Dr5drBJO6MTAloqaaiwnncDA3IZdKdjDQ2vZ9R8jXms
+          58rDPfc79lzYj37sAAGd3oHLoKonwq5GBvROQ293Z0ZjL3oGXm94tHmz1+8P9Vws/4iAWvS38qLB
+          H+N9Fus3do7G3wfSULPhs+NGIpEpAVmEOs2Yl1krkIbaTJoRpzAiEwOyCPWYNxdzVyANNZg6C9NP
+          YRraa/b4r7gG0tAuC0Z+0UW0htZbM+brPoVpaKVloz14O8c9bPmYavEbdcN9IEvRPOvHdsMKdGMp
+          GmjX23LnnWhL0SgbR3LnCvSU1eiAhndgS0A3Svqphm5u6gJ6Skw3VdE8VR0Q/WznICIgIgIiIiAi
+          AiIiICICIiIgIgIiIiAiAiIiICICIiIgIgIiIiAiAiIiICICIiIgIgIi8i9Lwi4G2rswzwAAAABJ
+          RU5ErkJggg==
+          EOF_ICON_192_B64_PHOTO_HELPER
+          base64 -d /tmp/EOF_ICON_192_B64_PHOTO_HELPER.b64 > app/src/main/assets/icon-192.png
+
+          cat > /tmp/EOF_ICON_512_B64_PHOTO_HELPER.b64 <<'EOF_ICON_512_B64_PHOTO_HELPER'
+          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
+          Ek4gCwCvo3QAAAAASUVORK5CYII=
+          EOF_ICON_512_B64_PHOTO_HELPER
+          base64 -d /tmp/EOF_ICON_512_B64_PHOTO_HELPER.b64 > app/src/main/assets/icon-512.png
+
+      - name: Verify clean project before build
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "--- gradle.properties ---"
+          cat gradle.properties
+          echo "--- app/build.gradle ---"
+          cat app/build.gradle
+          if grep -R "androidx.webkit" -n build.gradle app/build.gradle settings.gradle gradle.properties; then
+            echo "Found old androidx.webkit dependency. This is the wrong workflow file."
+            exit 1
+          fi
+
+      - name: Build debug APK
+        run: gradle assembleDebug --no-daemon
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: PhotoLayoutHelper-debug-apk
+          path: app/build/outputs/apk/debug/app-debug.apk
